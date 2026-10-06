@@ -70,73 +70,121 @@
 
         <!-- RESULT -->
         <section
-            id="resultSection"
-            class="result hidden"
-        >
+    id="resultSection"
+    class="result hidden"
+>
 
-            <h2>Scan Result</h2>
+    <h2>Scan Result</h2>
 
+    <!-- VERDICT -->
+    <div class="verdict-card">
 
-            <div class="result-box">
+        <div class="verdict-title">
+            <span id="verdictIcon">⚠️</span>
 
-                <p>
-                    <strong>URL:</strong>
-                    <span id="resultUrl"></span>
-                </p>
+            <span id="resultVerdict">
+                SUSPICIOUS
+            </span>
+        </div>
 
+        <div class="risk-score">
 
-                <p>
-                    <strong>Domain:</strong>
-                    <span id="resultDomain"></span>
-                </p>
+            <span id="resultScore">
+                0/100
+            </span>
 
+        </div>
 
-                <p>
-                    <strong>Protocol:</strong>
-                    <span id="resultProtocol"></span>
-                </p>
+        <div class="risk-bar">
 
+            <div
+                id="riskBar"
+                class="risk-bar-fill"
+            ></div>
 
-                <p>
-                    <strong>Path:</strong>
-                    <span id="resultPath"></span>
-                </p>
+        </div>
 
+        <p id="resultVerdictMessage"></p>
 
-                <p>
-                    <strong>URL Length:</strong>
-                    <span id="resultLength"></span>
-                </p>
-
-
-                <p>
-                    <strong>Risk Score:</strong>
-                    <span id="resultScore"></span>
-                </p>
+    </div>
 
 
-                <!-- NEW: VERDICT -->
-                <p>
-                    <strong>Verdict:</strong>
-                    <span id="resultVerdict"></span>
-                </p>
+    <!-- URL INFORMATION -->
+    <div class="info-card">
 
+        <h3>🔗 URL Information</h3>
 
-                <!-- NEW: VERDICT MESSAGE -->
-                <p>
-                    <strong>Verdict Explanation:</strong>
-                    <span id="resultVerdictMessage"></span>
-                </p>
+        <div class="info-grid">
 
+            <div class="info-item">
 
-                <p>
-                    <strong>Analysis:</strong>
-                    <span id="resultReason"></span>
-                </p>
+                <span>URL</span>
+
+                <strong id="resultUrl"></strong>
 
             </div>
 
-        </section>
+
+            <div class="info-item">
+
+                <span>Domain</span>
+
+                <strong id="resultDomain"></strong>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span>Protocol</span>
+
+                <strong id="resultProtocol"></strong>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span>Path</span>
+
+                <strong id="resultPath"></strong>
+
+            </div>
+
+
+            <div class="info-item">
+
+                <span>URL Length</span>
+
+                <strong id="resultLength"></strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- RISK FACTORS -->
+    <div class="info-card">
+
+        <h3>🔍 Risk Factors</h3>
+
+        <div id="riskFactors"></div>
+
+    </div>
+
+
+    <!-- ANALYSIS -->
+    <div class="info-card">
+
+        <h3>📝 Analysis</h3>
+
+        <div id="resultReason"></div>
+
+    </div>
+
+</section>
 
     </div>
 
