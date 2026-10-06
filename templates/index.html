@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>PhishGuard</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+
+<body>
+
+    <div class="container">
+
+        <!-- HEADER -->
+        <header>
+
+            <h1>🛡️ PhishGuard</h1>
+
+            <p>
+                Real-Time Phishing Attack Detection
+                and URL Analysis Tool
+            </p>
+
+        </header>
+
+
+        <!-- SCANNER -->
+        <section class="scanner">
+
+            <h2>Scan a URL</h2>
+
+            <p class="description">
+                Enter a URL below to analyze its
+                security characteristics.
+            </p>
+
+
+            <div class="input-area">
+
+                <input
+                    type="text"
+                    id="urlInput"
+                    placeholder="https://example.com"
+                >
+
+                <button id="scanButton">
+                    Scan URL
+                </button>
+
+            </div>
+
+
+            <p id="errorMessage"></p>
+
+        </section>
+
+
+        <!-- RESULT -->
+        <section
+            id="resultSection"
+            class="result hidden"
+        >
+
+            <h2>Scan Result</h2>
+
+
+            <div class="result-box">
+
+                <p>
+                    <strong>URL:</strong>
+                    <span id="resultUrl"></span>
+                </p>
+
+
+                <p>
+                    <strong>Domain:</strong>
+                    <span id="resultDomain"></span>
+                </p>
+
+
+                <p>
+                    <strong>Protocol:</strong>
+                    <span id="resultProtocol"></span>
+                </p>
+
+
+                <p>
+                    <strong>Path:</strong>
+                    <span id="resultPath"></span>
+                </p>
+
+
+                <p>
+                    <strong>URL Length:</strong>
+                    <span id="resultLength"></span>
+                </p>
+
+
+                <p>
+                    <strong>Risk Score:</strong>
+                    <span id="resultScore"></span>
+                </p>
+
+
+                <!-- NEW: VERDICT -->
+                <p>
+                    <strong>Verdict:</strong>
+                    <span id="resultVerdict"></span>
+                </p>
+
+
+                <!-- NEW: VERDICT MESSAGE -->
+                <p>
+                    <strong>Verdict Explanation:</strong>
+                    <span id="resultVerdictMessage"></span>
+                </p>
+
+
+                <p>
+                    <strong>Analysis:</strong>
+                    <span id="resultReason"></span>
+                </p>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+    <script
+        src="{{ url_for('static', filename='script.js') }}"
+    ></script>
+
+</body>
+
+</html>
