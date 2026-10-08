@@ -28,6 +28,15 @@ const dnsMX = document.getElementById("dnsMX");
 const dnsNS = document.getElementById("dnsNS");
 const dnsCNAME = document.getElementById("dnsCNAME");
 
+const registeredDomain =
+    document.getElementById("registeredDomain");
+
+const domainSubdomain =
+    document.getElementById("domainSubdomain");
+
+const domainTLD =
+    document.getElementById("domainTLD");
+
 
 // Scan button
 scanButton.addEventListener("click", scanURL);
@@ -124,6 +133,16 @@ function displayResult(data) {
     resultPath.textContent = data.path || "/";
 
     resultLength.textContent = data.url_length + " characters";
+
+    // Domain Information
+    registeredDomain.textContent =data.domain_info.registered_domain || "-";
+
+    domainSubdomain.textContent =data.domain_info.subdomain || "None";
+
+    domainTLD.textContent =
+    data.domain_info.tld
+        ? "." + data.domain_info.tld
+        : "-";
 
 
     // Risk score

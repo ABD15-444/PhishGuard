@@ -284,6 +284,15 @@ def check_dns(domain):
     )
 
     return dns_resolves, records
+
+def get_domain_information(domain):
+    extracted = tldextract.extract(domain)
+
+    return {
+        "subdomain": extracted.subdomain,
+        "registered_domain": extracted.registered_domain,
+        "tld": extracted.suffix
+    }
 # ========================================
 # 10. RISK VERDICT
 # ========================================
@@ -455,6 +464,8 @@ def scan_url():
     # --------------------------------
     dns_resolves, dns_records = check_dns(parsed.hostname)
 
+    domain_info = get_domain_information(parsed.hostname)
+
 
     # ========================================
     # COMBINE RISK SCORES
@@ -623,6 +634,8 @@ def scan_url():
 
         "domain":
             parsed.hostname,
+        
+        "domain_info": domain_info,
 
         "protocol":
             parsed.scheme,
