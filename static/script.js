@@ -20,6 +20,14 @@ const riskFactors = document.getElementById("riskFactors");
 const riskBar = document.getElementById("riskBar");
 const verdictIcon = document.getElementById("verdictIcon");
 
+const dnsStatus = document.getElementById("dnsStatus");
+
+const dnsA = document.getElementById("dnsA");
+const dnsAAAA = document.getElementById("dnsAAAA");
+const dnsMX = document.getElementById("dnsMX");
+const dnsNS = document.getElementById("dnsNS");
+const dnsCNAME = document.getElementById("dnsCNAME");
+
 
 // Scan button
 scanButton.addEventListener("click", scanURL);
@@ -215,6 +223,52 @@ function displayResult(data) {
     // Scroll to result
     resultSection.scrollIntoView({
         behavior: "smooth"
+    });
+
+        // DNS Analysis
+    if (data.dns_resolves) {
+
+        dnsStatus.textContent = "✓ Resolves";
+        dnsStatus.style.color = "#047857";
+
+    } else {
+
+        dnsStatus.textContent = "✗ Does not resolve";
+        dnsStatus.style.color = "#dc2626";
+
+    }
+
+
+    displayDNSRecords(dnsA, data.dns_records.A);
+    displayDNSRecords(dnsAAAA, data.dns_records.AAAA);
+    displayDNSRecords(dnsMX, data.dns_records.MX);
+    displayDNSRecords(dnsNS, data.dns_records.NS);
+    displayDNSRecords(dnsCNAME, data.dns_records.CNAME);
+
+}
+function displayDNSRecords(element, records) {
+
+    if (!records || records.length === 0) {
+
+        element.textContent = "No records found";
+
+        return;
+    }
+
+
+    element.innerHTML = "";
+
+
+    records.forEach(function (record) {
+
+        const recordElement = document.createElement("div");
+
+        recordElement.className = "dns-value";
+
+        recordElement.textContent = record;
+
+        element.appendChild(recordElement);
+
     });
 
 }

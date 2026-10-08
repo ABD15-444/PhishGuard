@@ -369,3 +369,61 @@ button:disabled {
     }
 
 }
+/* =========================
+   DNS ANALYSIS
+========================= */
+
+.dns-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 15px;
+    margin-bottom: 20px;
+
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.dns-status span {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.dns-status strong {
+    font-size: 15px;
+}
+
+.dns-record {
+    margin-bottom: 16px;
+}
+
+.dns-record:last-child {
+    margin-bottom: 0;
+}
+
+.dns-record h4 {
+    font-size: 14px;
+    margin-bottom: 7px;
+    color: #374151;
+}
+
+.dns-record > div {
+    padding: 12px 15px;
+
+    background: #f8fafc;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+
+    color: #374151;
+
+    word-break: break-word;
+}
+
+.dns-value {
+    padding: 4px 0;
+    font-family: monospace;
+    font-size: 14px;
+}

@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 from urllib.parse import urlparse
 import ipaddress
 import tldextract
+import dns.resolver
 
 app = Flask(__name__)
 
@@ -248,6 +249,41 @@ def check_https(protocol):
         False,
         "URL does not use HTTPS"
     )
+
+# ========================================
+# DNS CHECK
+# ========================================
+def check_dns(domain):
+    records = {}
+
+    record_types = ["A", "AAAA", "MX", "NS", "CNAME"]
+
+    for record_type in record_types:
+
+        try:
+            answers = dns.resolver.resolve(domain, record_type)
+
+            records[record_type] = [
+                str(answer) for answer in answers
+            ]
+
+        except (
+            dns.resolver.NoAnswer,
+            dns.resolver.NXDOMAIN,
+            dns.resolver.NoNameservers,
+            dns.exception.Timeout
+        ):
+            records[record_type] = []
+
+        except Exception:
+            records[record_type] = []
+
+    dns_resolves = any(
+        len(records[record_type]) > 0
+        for record_type in record_types
+    )
+
+    return dns_resolves, records
 # ========================================
 # 10. RISK VERDICT
 # ========================================
@@ -413,6 +449,11 @@ def scan_url():
 
     https_score, is_https, https_reason = \
         check_https(parsed.scheme)
+
+    # --------------------------------
+    # DNS CHECK
+    # --------------------------------
+    dns_resolves, dns_records = check_dns(parsed.hostname)
 
 
     # ========================================
@@ -594,6 +635,8 @@ def scan_url():
 
         "risk_score":
             score,
+        "dns_resolves": dns_resolves,
+        "dns_records": dns_records,
 
         "reasons":
             reasons,
