@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import ipaddress
 import tldextract
 import dns.resolver
@@ -8,7 +8,7 @@ import urllib.request
 import ssl
 import certifi
 import socket 
-
+import requests
 app = Flask(__name__)
 
 
@@ -646,6 +646,160 @@ def get_risk_verdict(score):
             "No major suspicious characteristics were detected."
         )
 
+def is_safe_public_host(hostname):
+    """Reject hosts that resolve to non-public IP addresses."""
+    try:
+        ip_addresses = socket.getaddrinfo(
+            hostname, None, type=socket.SOCK_STREAM
+        )
+
+        if not ip_addresses:
+            return False
+
+        for address in ip_addresses:
+            ip = ipaddress.ip_address(address[4][0])
+
+            if (
+                not ip.is_global
+                or ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_reserved
+            ):
+                return False
+
+        return True
+
+    except (socket.gaierror, ValueError, OSError):
+        return False
+
+
+def analyze_redirects(url, max_redirects=5):
+    """Follow redirects manually and inspect every destination."""
+    current_url = url
+    redirect_chain = []
+    findings = []
+    response = None
+
+    result = {
+        "checked": True,
+        "redirect_count": 0,
+        "redirect_chain": [],
+        "final_url": url,
+        "https_downgrade": False,
+        "excessive_redirects": False,
+        "error": None,
+        "findings": []
+    }
+
+    try:
+        for step in range(max_redirects + 1):
+            parsed = urlparse(current_url)
+
+            if parsed.scheme not in ("http", "https"):
+                raise ValueError("Blocked an unsupported URL scheme.")
+
+            if not parsed.hostname:
+                raise ValueError("The URL has no valid hostname.")
+
+            if parsed.username or parsed.password:
+                raise ValueError("URLs containing embedded credentials are blocked.")
+
+            if not is_safe_public_host(parsed.hostname):
+                raise ValueError(
+                    "Blocked a destination that is not a verified public host."
+                )
+
+            try:
+                response = requests.get(
+                    current_url,
+                    allow_redirects=False,
+                    stream=True,
+                    timeout=(3, 5),
+                    headers={"User-Agent": "PhishGuard/1.0"}
+                )
+
+                status_code = response.status_code
+                location = response.headers.get("Location")
+
+                if not (300 <= status_code < 400) or not location:
+                    result["final_url"] = current_url
+                    break
+
+                if step == max_redirects:
+                    result["excessive_redirects"] = True
+                    findings.append(
+                        f"Redirect limit of {max_redirects} reached."
+                    )
+                    result["final_url"] = current_url
+                    break
+
+                next_url = urljoin(current_url, location)
+                next_parsed = urlparse(next_url)
+
+                if next_parsed.scheme not in ("http", "https"):
+                    raise ValueError(
+                        "A redirect attempted to use an unsupported URL scheme."
+                    )
+
+                redirect_chain.append({
+                    "from": current_url,
+                    "to": next_url,
+                    "status_code": status_code
+                })
+
+                if (
+                    parsed.scheme == "https"
+                    and next_parsed.scheme == "http"
+                ):
+                    result["https_downgrade"] = True
+                    findings.append(
+                        "A redirect downgraded the connection from HTTPS to HTTP."
+                    )
+
+                current_url = next_url
+
+            finally:
+                if response is not None:
+                    response.close()
+                    response = None
+
+        result["redirect_count"] = len(redirect_chain)
+        result["redirect_chain"] = redirect_chain
+
+        if result["https_downgrade"] and not any(
+            "downgraded" in finding for finding in findings
+        ):
+            findings.append("An HTTPS-to-HTTP downgrade was detected.")
+
+        if not findings:
+            findings.append("No suspicious redirect behavior was detected.")
+
+        result["findings"] = findings
+
+    except requests.RequestException as error:
+        result["error"] = "Redirect request failed or timed out."
+        result["findings"] = [
+            "Redirect analysis could not be completed.",
+            "The destination may be unreachable or the request may have timed out."
+        ]
+
+    except ValueError as error:
+        result["error"] = str(error)
+        result["findings"] = [str(error)]
+
+    except Exception:
+        result["error"] = "An unexpected error occurred during redirect analysis."
+        result["findings"] = [
+            "Redirect analysis could not be completed safely."
+        ]
+
+    finally:
+        if response is not None:
+            response.close()
+
+    return result
 
 # ========================================
 # SCAN URL
@@ -795,6 +949,8 @@ def scan_url():
     domain_info = get_domain_information(parsed.hostname)
     rdap_info = get_rdap_information(parsed.hostname)
     ssl_info = check_ssl_certificate(parsed.hostname)
+
+    redirect_info = analyze_redirects(url)
 
 
     # ========================================
@@ -983,6 +1139,7 @@ def scan_url():
         "dns_resolves": dns_resolves,
         "dns_records": dns_records,
         "dns_security": dns_security,
+        "redirect_info": redirect_info,
 
         "reasons":
             reasons,

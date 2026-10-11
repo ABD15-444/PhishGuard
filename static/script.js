@@ -200,6 +200,48 @@ function displayResult(data) {
         expirationDate.textContent = "Unavailable";
         registrar.textContent = "Unavailable";
     }
+    // Redirect Analysis
+    const redirect = data.redirect_info;
+
+    document.getElementById("redirectCount").textContent =
+        redirect.redirect_count;
+
+    document.getElementById("redirectFinalUrl").textContent =
+        redirect.final_url || "Unavailable";
+
+    document.getElementById("redirectDowngrade").textContent =
+        redirect.https_downgrade ? "Yes" : "No";
+
+    document.getElementById("redirectExcessive").textContent =
+        redirect.excessive_redirects ? "Yes" : "No";
+
+    document.getElementById("redirectStatus").textContent =
+        redirect.error ? "Incomplete" : "Completed";
+
+    const findingsList = document.getElementById("redirectFindings");
+    findingsList.replaceChildren();
+
+    (redirect.findings || []).forEach((finding) => {
+        const li = document.createElement("li");
+        li.textContent = finding;
+        findingsList.appendChild(li);
+    });
+
+    const chainList = document.getElementById("redirectChain");
+    chainList.replaceChildren();
+
+    (redirect.redirect_chain || []).forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent =
+            `${item.status_code}: ${item.from} → ${item.to}`;
+        chainList.appendChild(li);
+    });
+
+    if (!redirect.redirect_chain || redirect.redirect_chain.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No redirects recorded.";
+        chainList.appendChild(li);
+    }
 
     // SSL/TLS Analysis
     const ssl = data.ssl_info;
