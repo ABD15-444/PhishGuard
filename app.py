@@ -3,6 +3,10 @@ from urllib.parse import urlparse
 import ipaddress
 import tldextract
 import dns.resolver
+import json
+import urllib.request
+import ssl
+import certifi
 
 app = Flask(__name__)
 
@@ -293,6 +297,122 @@ def get_domain_information(domain):
         "registered_domain": extracted.registered_domain,
         "tld": extracted.suffix
     }
+
+def get_rdap_information(domain):
+    import json
+    import urllib.request
+    from datetime import datetime, timezone
+
+    result = {
+        "available": False,
+        "creation_date": None,
+        "expiration_date": None,
+        "domain_age_days": None,
+        "registrar": None,
+        "message": "Registration information unavailable"
+    }
+
+    try:
+        # Extract the registered domain
+        extracted = tldextract.extract(domain)
+        registered_domain = extracted.top_domain_under_public_suffix
+
+        if not registered_domain:
+            result["message"] = "A registered domain could not be identified"
+            return result
+
+        # Query the RDAP service
+        rdap_url = f"https://rdap.org/domain/{registered_domain}"
+
+        request = urllib.request.Request(
+            rdap_url,
+            headers={"User-Agent": "PhishGuard/1.0"}
+        )
+
+        ssl_context = ssl.create_default_context(
+            cafile=certifi.where())
+
+        with urllib.request.urlopen(
+            request,
+            timeout=8,
+            context=ssl_context
+        ) as response:
+            data = json.loads(response.read().decode("utf-8"))
+
+            # Read registration events
+            creation_date = None
+            expiration_date = None
+
+        for event in data.get("events", []):
+            action = event.get("eventAction", "").lower()
+            date_value = event.get("eventDate")
+
+            if action == "registration":
+                creation_date = date_value
+
+            elif action == "expiration":
+                expiration_date = date_value
+
+        # Format dates and calculate age
+        def parse_date(value):
+            if not value:
+                return None
+
+            try:
+                return datetime.fromisoformat(
+                    value.replace("Z", "+00:00")
+                )
+            except (ValueError, TypeError):
+                return None
+
+        created = parse_date(creation_date)
+        expires = parse_date(expiration_date)
+
+        result["creation_date"] = (
+            created.date().isoformat() if created else None
+        )
+
+        result["expiration_date"] = (
+            expires.date().isoformat() if expires else None
+        )
+
+        if created:
+            age = datetime.now(timezone.utc) - created
+            result["domain_age_days"] = max(0, age.days)
+
+        # Find registrar name
+        for entity in data.get("entities", []):
+            if "registrar" in entity.get("roles", []):
+                for item in entity.get("vcardArray", [None, []])[1]:
+                    if (
+                        isinstance(item, list)
+                        and len(item) >= 4
+                        and item[0] == "fn"
+                    ):
+                        result["registrar"] = item[3]
+                        break
+
+                if result["registrar"]:
+                    break
+
+        result["available"] = True
+        result["message"] = "Registration information retrieved"
+
+    
+    except Exception as error:
+        print(
+            f"RDAP lookup failed for {domain}: "
+            f"{type(error).__name__}: {error}"
+        )
+
+        result["message"] = (
+            "Registration data could not be retrieved. "
+            "Check the Flask terminal for details."
+        )
+
+    return result
+
+
 # ========================================
 # 10. RISK VERDICT
 # ========================================
@@ -465,6 +585,7 @@ def scan_url():
     dns_resolves, dns_records = check_dns(parsed.hostname)
 
     domain_info = get_domain_information(parsed.hostname)
+    rdap_info = get_rdap_information(parsed.hostname)
 
 
     # ========================================
@@ -636,6 +757,7 @@ def scan_url():
             parsed.hostname,
         
         "domain_info": domain_info,
+        "rdap_info": rdap_info,
 
         "protocol":
             parsed.scheme,

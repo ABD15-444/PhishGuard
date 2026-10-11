@@ -28,6 +28,12 @@ const dnsMX = document.getElementById("dnsMX");
 const dnsNS = document.getElementById("dnsNS");
 const dnsCNAME = document.getElementById("dnsCNAME");
 
+const domainAge = document.getElementById("domainAge");
+const creationDate = document.getElementById("creationDate");
+const expirationDate = document.getElementById("expirationDate");
+const registrar = document.getElementById("registrar");
+
+
 const registeredDomain =
     document.getElementById("registeredDomain");
 
@@ -144,6 +150,42 @@ function displayResult(data) {
         ? "." + data.domain_info.tld
         : "-";
 
+
+    
+    // Domain Registration Information
+    const rdap = data.rdap_info;
+
+    if (rdap && rdap.available) {
+        if (rdap.domain_age_days !== null &&
+            rdap.domain_age_days !== undefined) {
+
+            const days = rdap.domain_age_days;
+            const years = Math.floor(days / 365);
+
+            domainAge.textContent =
+                years >= 1
+                    ? `${years} years (${days} days)`
+                    : `${days} days`;
+
+        } else {
+            domainAge.textContent = "Unavailable";
+        }
+
+        creationDate.textContent =
+            rdap.creation_date || "Unavailable";
+
+        expirationDate.textContent =
+            rdap.expiration_date || "Unavailable";
+
+        registrar.textContent =
+            rdap.registrar || "Unavailable";
+
+    } else {
+        domainAge.textContent = "Unavailable";
+        creationDate.textContent = "Unavailable";
+        expirationDate.textContent = "Unavailable";
+        registrar.textContent = "Unavailable";
+    }
 
     // Risk score
     resultScore.textContent = data.risk_score + "/100";
