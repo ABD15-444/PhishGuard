@@ -618,6 +618,118 @@ def check_ssl_certificate(domain):
 
     return result
 
+def get_ip_intelligence(domain):
+    """Retrieve IPv4 and IPv6 addresses for a domain."""
+    result = {
+        "domain": domain,
+        "ipv4_addresses": [],
+        "ipv6_addresses": [],
+        "resolved": False,
+        "message": ""
+    }
+
+    try:
+        addresses = socket.getaddrinfo(
+            domain,
+            None,
+            type=socket.SOCK_STREAM
+        )
+
+        for address in addresses:
+            ip_version = address[0]
+            ip_address = address[4][0]
+
+            if ip_version == socket.AF_INET:
+                if ip_address not in result["ipv4_addresses"]:
+                    result["ipv4_addresses"].append(ip_address)
+
+            elif ip_version == socket.AF_INET6:
+                if ip_address not in result["ipv6_addresses"]:
+                    result["ipv6_addresses"].append(ip_address)
+
+        result["resolved"] = bool(
+            result["ipv4_addresses"] or result["ipv6_addresses"]
+        )
+
+        if result["resolved"]:
+            result["message"] = "IP addresses retrieved successfully."
+        else:
+            result["message"] = "No IP addresses were found."
+
+    except socket.gaierror:
+        result["message"] = "The domain could not be resolved."
+
+    except (OSError, ValueError):
+        result["message"] = "IP address lookup failed."
+
+    return result
+
+def get_ip_geolocation(ip_address):
+    """Retrieve approximate location and network details for a public IP."""
+
+    result = {
+        "available": False,
+        "ip": ip_address,
+        "city": None,
+        "region": None,
+        "country": None,
+        "country_code": None,
+        "organization": None,
+        "asn": None,
+        "message": "Geolocation information unavailable"
+    }
+
+    try:
+        # Only query public IP addresses
+        ip = ipaddress.ip_address(ip_address)
+
+        if not ip.is_global:
+            result["message"] = (
+                "Geolocation lookup skipped for a non-public IP address."
+            )
+            return result
+
+        api_url = f"https://ipapi.co/{ip.compressed}/json/"
+
+        response = requests.get(
+            api_url,
+            timeout=5,
+            headers={"User-Agent": "PhishGuard/1.0"}
+        )
+        response.raise_for_status()
+
+        data = response.json()
+
+        if data.get("error"):
+            result["message"] = data.get(
+                "reason", "The geolocation service returned an error."
+            )
+            return result
+
+        result.update({
+            "city": data.get("city"),
+            "region": data.get("region"),
+            "country": data.get("country_name"),
+            "country_code": data.get("country_code"),
+            "organization": data.get("org"),
+            "asn": data.get("asn"),
+            "available": True,
+            "message": "Geolocation and network information retrieved."
+        })
+
+    except (requests.RequestException, ValueError) as error:
+        print(f"IP geolocation lookup failed: {error}")
+        result["message"] = (
+            "The geolocation service could not be reached or returned "
+            "invalid data."
+        )
+
+    except Exception as error:
+        print(f"Unexpected geolocation error: {error}")
+        result["message"] = "Geolocation lookup failed."
+
+    return result
+
 
 
 # ========================================
@@ -854,6 +966,7 @@ def scan_url():
     # --------------------------------
 
     parsed = urlparse(url)
+    domain = parsed.hostname
 
 
     # --------------------------------
@@ -866,6 +979,18 @@ def scan_url():
             "error": "Invalid URL"
         }), 400
 
+    domain = parsed.hostname
+    ip_info = get_ip_intelligence(domain)
+    geo_info = None
+
+    if ip_info["ipv4_addresses"]:
+        geo_info = get_ip_geolocation(
+            ip_info["ipv4_addresses"][0]
+        )
+    elif ip_info["ipv6_addresses"]:
+        geo_info = get_ip_geolocation(
+            ip_info["ipv6_addresses"][0]
+        )
 
     # ========================================
     # RUN ALL DETECTION METHODS
@@ -1146,6 +1271,8 @@ def scan_url():
 
         "is_ip_address":
             is_ip,
+        "ip_info": ip_info,
+        "geo_info": geo_info,
 
         "has_at_symbol":
             has_at_symbol,

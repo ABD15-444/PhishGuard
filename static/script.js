@@ -200,6 +200,56 @@ function displayResult(data) {
         expirationDate.textContent = "Unavailable";
         registrar.textContent = "Unavailable";
     }
+
+    // IP & Network Intelligence
+const ipInfo = data.ip_info || {};
+
+document.getElementById("ipDomain").textContent =
+    ipInfo.domain || data.domain || "Unavailable";
+
+document.getElementById("ipResolutionStatus").textContent =
+    ipInfo.resolved ? "Resolved" : "Check DNS results";
+
+const ipv4List = document.getElementById("ipv4Addresses");
+ipv4List.replaceChildren();
+
+(ipInfo.ipv4_addresses || []).forEach((ip) => {
+    const li = document.createElement("li");
+    li.textContent = ip;
+    ipv4List.appendChild(li);
+});
+
+const ipv6List = document.getElementById("ipv6Addresses");
+ipv6List.replaceChildren();
+
+(ipInfo.ipv6_addresses || []).forEach((ip) => {
+    const li = document.createElement("li");
+    li.textContent = ip;
+    ipv6List.appendChild(li);
+});
+
+document.getElementById("ipMessage").textContent =
+    ipInfo.message || "IP analysis completed";
+    // IP Geolocation and Network Information
+const geoInfo = data.geo_info;
+
+document.getElementById("geoCity").textContent =
+    geoInfo?.city || "Unavailable";
+
+document.getElementById("geoRegion").textContent =
+    geoInfo?.region || "Unavailable";
+
+document.getElementById("geoCountry").textContent =
+    geoInfo?.country || "Unavailable";
+
+document.getElementById("geoCountryCode").textContent =
+    geoInfo?.country_code || "Unavailable";
+
+document.getElementById("geoOrganization").textContent =
+    geoInfo?.organization || "Unavailable";
+
+document.getElementById("geoASN").textContent =
+    geoInfo?.asn || "Unavailable";
     // Redirect Analysis
     const redirect = data.redirect_info;
 
