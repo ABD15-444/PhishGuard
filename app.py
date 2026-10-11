@@ -7,6 +7,7 @@ import json
 import urllib.request
 import ssl
 import certifi
+import socket 
 
 app = Flask(__name__)
 
@@ -413,6 +414,131 @@ def get_rdap_information(domain):
     return result
 
 
+def check_ssl_certificate(domain):
+    from datetime import datetime, timezone
+
+    result = {
+        "checked": False,
+        "valid": False,
+        "issuer": None,
+        "subject": None,
+        "valid_from": None,
+        "valid_until": None,
+        "days_until_expiry": None,
+        "domain_matches": False,
+        "message": "Certificate information unavailable"
+    }
+
+    try:
+        # Remove a trailing dot, if present
+        domain = domain.rstrip(".")
+
+        # Connect using normal certificate verification
+        context = ssl.create_default_context(cafile=certifi.where())
+        print("SSL certificate bundle:", certifi.where())
+        print("Checking hostname:", domain)
+
+        with socket.create_connection(
+            (domain, 443),
+            timeout=5
+        ) as connection:
+
+            with context.wrap_socket(
+                connection,
+                server_hostname=domain
+            ) as secure_socket:
+
+                certificate = secure_socket.getpeercert()
+
+        result["checked"] = True
+        result["valid"] = True
+
+        # Extract issuer
+        issuer_parts = certificate.get("issuer", [])
+        issuer_names = []
+
+        for group in issuer_parts:
+            for key, value in group:
+                if key == "organizationName":
+                    issuer_names.append(value)
+
+        result["issuer"] = (
+            ", ".join(issuer_names) if issuer_names else "Not provided"
+        )
+
+        # Extract subject
+        subject_parts = certificate.get("subject", [])
+        subject_names = []
+
+        for group in subject_parts:
+            for key, value in group:
+                if key == "commonName":
+                    subject_names.append(value)
+
+        result["subject"] = (
+            ", ".join(subject_names) if subject_names else "Not provided"
+        )
+
+        # Extract certificate validity dates
+        valid_from = certificate.get("notBefore")
+        valid_until = certificate.get("notAfter")
+
+        if valid_from:
+            start = datetime.fromtimestamp(
+                ssl.cert_time_to_seconds(valid_from),
+                tz=timezone.utc
+            )
+            result["valid_from"] = start.date().isoformat()
+
+        if valid_until:
+            expiry = datetime.fromtimestamp(
+                ssl.cert_time_to_seconds(valid_until),
+                tz=timezone.utc
+            )
+
+            result["valid_until"] = expiry.date().isoformat()
+
+            days_left = (
+                expiry - datetime.now(timezone.utc)
+            ).days
+
+            result["days_until_expiry"] = days_left
+
+        # The verified TLS handshake validates hostname matching.
+        result["domain_matches"] = True
+
+        result["message"] = "TLS certificate verified successfully"
+
+    except ssl.SSLCertVerificationError as error:
+        print(
+            f"SSL verification failed for {domain}: {error}"
+        )
+        result["message"] = (
+            "Certificate verification failed. "
+            "Check the Flask terminal for details."
+        )
+
+    except (socket.timeout, TimeoutError):
+        result["message"] = "Connection timed out"
+
+    except (socket.gaierror, ConnectionRefusedError, OSError) as error:
+        result["message"] = (
+            f"Could not establish a verified TLS connection: {error}"
+        )
+
+    except Exception as error:
+        print(
+        f"SSL analysis failed for {domain}: "
+        f"{type(error).__name__}: {error}"
+        )
+        result["message"] = (
+            f"Certificate analysis failed: {type(error).__name__}"
+        )
+
+    return result
+
+
+
 # ========================================
 # 10. RISK VERDICT
 # ========================================
@@ -586,6 +712,7 @@ def scan_url():
 
     domain_info = get_domain_information(parsed.hostname)
     rdap_info = get_rdap_information(parsed.hostname)
+    ssl_info = check_ssl_certificate(parsed.hostname)
 
 
     # ========================================
@@ -758,6 +885,7 @@ def scan_url():
         
         "domain_info": domain_info,
         "rdap_info": rdap_info,
+        "ssl_info": ssl_info,
 
         "protocol":
             parsed.scheme,

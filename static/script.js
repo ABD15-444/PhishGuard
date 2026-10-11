@@ -44,6 +44,17 @@ const domainTLD =
     document.getElementById("domainTLD");
 
 
+const sslStatus = document.getElementById("sslStatus");
+const sslDomainMatch = document.getElementById("sslDomainMatch");
+const sslIssuer = document.getElementById("sslIssuer");
+const sslSubject = document.getElementById("sslSubject");
+const sslValidFrom = document.getElementById("sslValidFrom");
+const sslValidUntil = document.getElementById("sslValidUntil");
+const sslDaysRemaining = document.getElementById("sslDaysRemaining");
+const sslMessage = document.getElementById("sslMessage");
+
+
+
 // Scan button
 scanButton.addEventListener("click", scanURL);
 
@@ -186,6 +197,48 @@ function displayResult(data) {
         expirationDate.textContent = "Unavailable";
         registrar.textContent = "Unavailable";
     }
+
+    // SSL/TLS Analysis
+    const ssl = data.ssl_info;
+
+    if (ssl && ssl.checked) {
+        sslStatus.textContent = ssl.valid
+            ? "Valid"
+            : "Invalid";
+
+        sslStatus.style.color = ssl.valid
+            ? "#047857"
+            : "#dc2626";
+
+        sslDomainMatch.textContent = ssl.domain_matches
+            ? "Yes"
+            : "No";
+
+        sslIssuer.textContent = ssl.issuer || "Unavailable";
+        sslSubject.textContent = ssl.subject || "Unavailable";
+        sslValidFrom.textContent = ssl.valid_from || "Unavailable";
+        sslValidUntil.textContent = ssl.valid_until || "Unavailable";
+
+        sslDaysRemaining.textContent =
+            ssl.days_until_expiry !== null &&
+            ssl.days_until_expiry !== undefined
+                ? ssl.days_until_expiry + " days"
+                : "Unavailable";
+
+        sslMessage.textContent = ssl.message || "";
+
+    } else {
+        sslStatus.textContent = "Unavailable";
+        sslDomainMatch.textContent = "Unavailable";
+        sslIssuer.textContent = "Unavailable";
+        sslSubject.textContent = "Unavailable";
+        sslValidFrom.textContent = "Unavailable";
+        sslValidUntil.textContent = "Unavailable";
+        sslDaysRemaining.textContent = "Unavailable";
+        sslMessage.textContent =
+            ssl?.message || "Certificate information could not be retrieved.";
+    }
+
 
     // Risk score
     resultScore.textContent = data.risk_score + "/100";
