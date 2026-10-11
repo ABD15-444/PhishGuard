@@ -106,9 +106,12 @@ async function scanURL() {
 
         });
 
+        
+        const responseText = await response.text();
+        console.log("HTTP status:", response.status);
+        console.log("Response:", responseText);
 
-        const data = await response.json();
-
+        const data = JSON.parse(responseText);
 
         if (!response.ok) {
 
@@ -358,6 +361,45 @@ function displayResult(data) {
     displayDNSRecords(dnsMX, data.dns_records.MX);
     displayDNSRecords(dnsNS, data.dns_records.NS);
     displayDNSRecords(dnsCNAME, data.dns_records.CNAME);
+    
+    // DNS Security Checks
+    const dnsSecurity = data.dns_security;
+
+    if (dnsSecurity) {
+        document.getElementById("dnsSecurityResolves").textContent =
+            dnsSecurity.domain_resolves ? "Yes" : "No";
+
+        document.getElementById("dnsSecurityIPv4").textContent =
+            dnsSecurity.has_ipv4 ? "Found" : "Not found";
+
+        document.getElementById("dnsSecurityIPv6").textContent =
+            dnsSecurity.has_ipv6 ? "Found" : "Not found";
+
+        document.getElementById("dnsSecurityNameservers").textContent =
+            dnsSecurity.has_nameservers ? "Found" : "Not found";
+
+        document.getElementById("dnsSecurityMail").textContent =
+            dnsSecurity.has_mail_servers ? "Found" : "Not found";
+
+        const findingsList =
+            document.getElementById("dnsSecurityFindings");
+
+        findingsList.replaceChildren();
+
+        if (dnsSecurity.findings.length === 0) {
+            const item = document.createElement("li");
+            item.textContent =
+                "No issues flagged by current checks.";
+            findingsList.appendChild(item);
+        } else {
+            dnsSecurity.findings.forEach(function (finding) {
+                const item = document.createElement("li");
+                item.textContent = finding;
+                findingsList.appendChild(item);
+            });
+        }
+    }
+
 
 }
 function displayDNSRecords(element, records) {

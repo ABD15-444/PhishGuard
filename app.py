@@ -290,15 +290,96 @@ def check_dns(domain):
 
     return dns_resolves, records
 
+
+def check_dns(domain):
+    resolver = dns.resolver.Resolver(configure=False)
+    resolver.nameservers = ["1.1.1.1"]
+    resolver.timeout = 3
+    resolver.lifetime = 5
+
+    records = {}
+    lookup_status = {}
+
+    record_types = ["A", "AAAA", "MX", "NS", "CNAME"]
+
+    for record_type in record_types:
+        try:
+            answers = resolver.resolve(
+                domain,
+                record_type,
+                lifetime=5
+            )
+
+            records[record_type] = [
+                str(answer) for answer in answers
+            ]
+            lookup_status[record_type] = "found"
+
+        except dns.resolver.NoAnswer:
+            records[record_type] = []
+            lookup_status[record_type] = "no_record"
+
+        except dns.resolver.NXDOMAIN:
+            records[record_type] = []
+            lookup_status[record_type] = "domain_not_found"
+
+        except dns.resolver.NoNameservers:
+            records[record_type] = []
+            lookup_status[record_type] = "no_nameservers"
+
+        except dns.exception.Timeout:
+            records[record_type] = []
+            lookup_status[record_type] = "timeout"
+
+        except Exception:
+            records[record_type] = []
+            lookup_status[record_type] = "error"
+
+    dns_resolves = (
+        lookup_status["A"] == "found"
+        or lookup_status["AAAA"] == "found"
+    )
+
+    security_checks = {
+        "domain_resolves": dns_resolves,
+        "has_ipv4": bool(records["A"]),
+        "has_ipv6": bool(records["AAAA"]),
+        "has_nameservers": bool(records["NS"]),
+        "has_mail_servers": bool(records["MX"]),
+        "lookup_status": lookup_status,
+        "findings": []
+    }
+
+    if not dns_resolves:
+        security_checks["findings"].append(
+            "No IPv4 or IPv6 address record was resolved. "
+            "Check the DNS lookup status before drawing conclusions."
+        )
+
+    if (
+        lookup_status["A"] == "timeout"
+        or lookup_status["AAAA"] == "timeout"
+    ):
+        security_checks["findings"].append(
+            "An address lookup timed out; DNS may be "
+            "temporarily unavailable."
+        )
+
+    if lookup_status["NS"] == "no_nameservers":
+        security_checks["findings"].append(
+            "DNS returned no usable nameservers for this query."
+        )
+
+    return dns_resolves, records, security_checks
+
 def get_domain_information(domain):
     extracted = tldextract.extract(domain)
 
     return {
         "subdomain": extracted.subdomain,
-        "registered_domain": extracted.registered_domain,
+        "registered_domain": extracted.top_domain_under_public_suffix,
         "tld": extracted.suffix
     }
-
 def get_rdap_information(domain):
     import json
     import urllib.request
@@ -708,7 +789,8 @@ def scan_url():
     # --------------------------------
     # DNS CHECK
     # --------------------------------
-    dns_resolves, dns_records = check_dns(parsed.hostname)
+    dns_resolves, dns_records, dns_security = check_dns(
+    parsed.hostname)
 
     domain_info = get_domain_information(parsed.hostname)
     rdap_info = get_rdap_information(parsed.hostname)
@@ -900,6 +982,7 @@ def scan_url():
             score,
         "dns_resolves": dns_resolves,
         "dns_records": dns_records,
+        "dns_security": dns_security,
 
         "reasons":
             reasons,
@@ -925,6 +1008,7 @@ def scan_url():
         "risk_factors": risk_factors,
         "verdict": verdict,
         "verdict_message": verdict_message,
+        
     })
 
 
