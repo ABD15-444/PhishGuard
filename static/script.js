@@ -490,6 +490,26 @@ document.getElementById("geoASN").textContent =
                 findingsList.appendChild(item);
             });
         }
+        // VirusTotal Threat Intelligence
+    const vt = data.virustotal_info || {};
+
+    document.getElementById("vtStatus").textContent =
+        vt.status || (vt.available ? "Available" : "Unavailable");
+
+    document.getElementById("vtHarmless").textContent =
+        vt.harmless ?? "-";
+
+    document.getElementById("vtMalicious").textContent =
+        vt.malicious ?? "-";
+
+    document.getElementById("vtSuspicious").textContent =
+        vt.suspicious ?? "-";
+
+    document.getElementById("vtUndetected").textContent =
+        vt.undetected ?? "-";
+
+    document.getElementById("vtMessage").textContent =
+        vt.message || "No VirusTotal information available.";
     }
 
 
