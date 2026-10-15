@@ -19,3 +19,13 @@ https://webmail-login.example/session/confirm,1,1,35,SUSPICIOUS
 https://delivery-update.example/track/confirm-details,1,1,35,SUSPICIOUS
 https://free-prize.example/claim/reward,1,1,35,SUSPICIOUS
 https://password-reset.example/validate-account,1,1,35,SUSPICIOUS
+https://www.paypal.com/signin,0,0,5,SAFE
+https://account.google.com/,0,0,5,SAFE
+https://www.microsoft.com/en-us/security,0,0,5,SAFE
+https://www.apple.com/apple-pay/,0,0,0,SAFE
+https://support.mozilla.org/,0,0,5,SAFE
+https://support.google.com/accounts/,0,0,10,SAFE
+https://www.ups.com/,0,0,0,SAFE
+https://www.bankofamerica.com/,0,0,5,SAFE
+https://support.apple.com/,0,0,5,SAFE
+https://github.com/login,0,0,5,SAFE

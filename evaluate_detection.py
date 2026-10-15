@@ -16,9 +16,35 @@ def evaluate():
     with open(CSV_FILE, "r", newline="", encoding="utf-8") as file:
         dataset = list(csv.DictReader(file))
 
+    
     if not dataset:
         print("The CSV dataset is empty.")
         return
+
+    required_columns = {"url", "label", "source"}
+
+    if not required_columns.issubset(dataset[0].keys()):
+        print(
+            "Invalid CSV format. Required columns: "
+            "url,label,source"
+        )
+        return
+
+    for line_number, row in enumerate(dataset, start=2):
+        url = row.get("url", "").strip()
+        label = row.get("label", "").strip()
+
+        if not url:
+            print(f"Missing URL on CSV line {line_number}.")
+            return
+
+        if label not in {"0", "1"}:
+            print(
+                f"Invalid label on CSV line {line_number}: "
+                f"{label!r}. Labels must be 0 or 1."
+            )
+            return
+
 
     for row in dataset:
         url = row["url"].strip()
@@ -99,6 +125,7 @@ def evaluate():
         if response.status_code != 200:
             print(f"Could not evaluate: {url}")
             print(f"HTTP status: {response.status_code}")
+            print("This URL is excluded from the classification metrics.")
             continue
 
         data = response.get_json()
