@@ -168,8 +168,8 @@ def check_suspicious_tld(domain):
 # ========================================
 # 6. SUSPICIOUS KEYWORD CHECK
 # ========================================
-def check_suspicious_keywords(url):
 
+def check_suspicious_keywords(url):
     suspicious_keywords = [
         "login",
         "signin",
@@ -183,42 +183,48 @@ def check_suspicious_keywords(url):
         "update",
         "bank",
         "wallet",
-        "payment"
+        "payment",
+        "urgent",
+        "prize",
+        "claim",
+        "reward",
+        "support",
+        "webmail",
+        "delivery",
+        "restore",
+        "access",
+        "validate",
+        "alert",
+        "free",
+        "reset",
+        "session",
+        "track",
+        "details"
     ]
 
     url_lower = url.lower()
 
-    found_keywords = []
+    found_keywords = [
+        keyword
+        for keyword in suspicious_keywords
+        if keyword in url_lower
+    ]
 
-    for keyword in suspicious_keywords:
-
-        if keyword in url_lower:
-
-            found_keywords.append(keyword)
-
-    # No suspicious keywords
     if not found_keywords:
-
         return (
             0,
             [],
             "No suspicious keywords detected"
         )
 
-    # 5 points per keyword
-    # Maximum 20 points
-    score = min(
-        len(found_keywords) * 5,
-        20
-    )
+    # Maximum 20 points from keyword detection.
+    score = min(len(found_keywords) * 5, 20)
 
     return (
         score,
         found_keywords,
-        "Suspicious keywords detected: "
-        + ", ".join(found_keywords)
+        f"Suspicious keywords detected: {', '.join(found_keywords)}"
     )
-
 
 # ========================================
 # 7. PUNYCODE CHECK
@@ -1254,6 +1260,18 @@ def scan_url():
             "feature": "Suspicious Keywords",
             "score": keyword_score,
             "reason": keyword_reason
+        })
+            # Additional risk for combinations of suspicious keywords
+    if len(found_keywords) >= 3:
+        combination_score = 15
+
+        risk_factors.append({
+            "feature": "Phishing Language Combination",
+            "score": combination_score,
+            "reason": (
+                "Multiple suspicious keywords appear together "
+                "in the URL."
+            )
         })
 
     if punycode_score > 0:
