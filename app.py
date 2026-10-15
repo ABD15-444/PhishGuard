@@ -9,6 +9,9 @@ import ssl
 import certifi
 import socket 
 import requests
+import os
+from dotenv import load_dotenv
+load_dotenv()
 app = Flask(__name__)
 
 
@@ -913,6 +916,82 @@ def analyze_redirects(url, max_redirects=5):
 
     return result
 
+def check_virustotal(url):
+    api_key = os.getenv("VIRUSTOTAL_API_KEY")
+
+    if not api_key:
+        return {
+            "available": False,
+            "message": "VirusTotal API key is not configured."
+        }
+
+    headers = {
+        "x-apikey": api_key
+    }
+
+    try:
+        response = requests.post(
+            "https://www.virustotal.com/api/v3/urls",
+            headers=headers,
+            data={"url": url},
+            timeout=15
+        )
+
+        if response.status_code != 200:
+            return {
+                "available": False,
+                "message": f"VirusTotal submission failed (HTTP {response.status_code})."
+            }
+
+        analysis_id = response.json().get("data", {}).get("id")
+
+        if not analysis_id:
+            return {
+                "available": False,
+                "message": "VirusTotal did not return an analysis ID."
+            }
+
+        analysis_response = requests.get(
+            f"https://www.virustotal.com/api/v3/analyses/{analysis_id}",
+            headers=headers,
+            timeout=15
+        )
+
+        if analysis_response.status_code != 200:
+            return {
+                "available": False,
+                "message": "URL submitted, but its analysis could not be retrieved yet."
+            }
+
+        attributes = (
+            analysis_response.json()
+            .get("data", {})
+            .get("attributes", {})
+        )
+
+        stats = attributes.get("stats", {})
+
+        return {
+            "available": True,
+            "status": attributes.get("status", "unknown"),
+            "malicious": stats.get("malicious", 0),
+            "suspicious": stats.get("suspicious", 0),
+            "harmless": stats.get("harmless", 0),
+            "undetected": stats.get("undetected", 0),
+            "message": "Analysis retrieved successfully."
+        }
+
+    except requests.RequestException:
+        return {
+            "available": False,
+            "message": "VirusTotal could not be reached. Try again later."
+        }
+    except (ValueError, TypeError):
+        return {
+            "available": False,
+            "message": "VirusTotal returned an unexpected response."
+        }
+
 # ========================================
 # SCAN URL
 # ========================================
@@ -1229,6 +1308,8 @@ def scan_url():
 
     verdict, verdict_message = \
         get_risk_verdict(score)
+    
+    virustotal_info = check_virustotal(url)
 
 
     # ========================================
@@ -1292,6 +1373,7 @@ def scan_url():
         "risk_factors": risk_factors,
         "verdict": verdict,
         "verdict_message": verdict_message,
+        "virustotal_info": virustotal_info,
         
     })
 
