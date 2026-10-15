@@ -9,6 +9,7 @@ import ssl
 import certifi
 import socket 
 import requests
+import re
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -1033,12 +1034,62 @@ def scan_url():
     # ADD HTTPS IF PROTOCOL MISSING
     # --------------------------------
 
-    if not url.startswith(
-        ("http://", "https://")
-    ):
+   # Normalize and validate the URL
+    url = url.strip()
 
+    if not url:
+        return jsonify({"error": "URL is required."}), 400
+
+    parsed_input = urlparse(url)
+
+    if parsed_input.scheme:
+        if parsed_input.scheme not in ("http", "https"):
+            return jsonify({
+                "error": "Unsupported URL scheme. Use HTTP or HTTPS."
+            }), 400
+    else:
         url = "https://" + url
 
+    parsed_input = urlparse(url)
+
+# Validate hostname and port
+    try:
+        hostname = parsed_input.hostname
+        parsed_input.port  # Raises ValueError for an invalid port
+    except ValueError:
+        return jsonify({"error": "Invalid hostname or port."}), 400
+
+    if not hostname:
+        return jsonify({"error": "URL must contain a hostname."}), 400
+
+# Reject whitespace in the hostname
+    if any(character.isspace() for character in hostname):
+        return jsonify({"error": "Invalid hostname."}), 400
+
+# Accept valid IP addresses or validate a domain name
+    try:
+        ipaddress.ip_address(hostname)
+    except ValueError:
+        try:
+            ascii_hostname = hostname.rstrip(".").encode("idna").decode("ascii")
+        except UnicodeError:
+            return jsonify({"error": "Invalid hostname."}), 400
+
+        if len(ascii_hostname) > 253:
+            return jsonify({"error": "Invalid hostname."}), 400
+
+        labels = ascii_hostname.split(".")
+
+        if any(
+            not label
+            or len(label) > 63
+            or not re.fullmatch(
+                r"[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?",
+                label
+            )
+            for label in labels
+        ):
+            return jsonify({"error": "Invalid hostname."}), 400
 
     # --------------------------------
     # PARSE URL
@@ -1163,218 +1214,178 @@ def scan_url():
 
     risk_factors = []
 
-
     if length_score > 0:
-
         risk_factors.append({
             "feature": "URL Length",
             "score": length_score,
             "reason": length_reason
         })
 
-
     if ip_score > 0:
-
         risk_factors.append({
             "feature": "IP Address",
             "score": ip_score,
             "reason": ip_reason
         })
 
-
     if at_score > 0:
-
         risk_factors.append({
             "feature": "@ Symbol",
             "score": at_score,
             "reason": at_reason
         })
 
-
     if subdomain_score > 0:
-
         risk_factors.append({
             "feature": "Subdomains",
             "score": subdomain_score,
             "reason": subdomain_reason
         })
 
-
     if tld_score > 0:
-
         risk_factors.append({
             "feature": "Suspicious TLD",
             "score": tld_score,
             "reason": tld_reason
         })
 
-
     if keyword_score > 0:
-
         risk_factors.append({
             "feature": "Suspicious Keywords",
             "score": keyword_score,
             "reason": keyword_reason
-    })
-
+        })
 
     if punycode_score > 0:
-
         risk_factors.append({
             "feature": "Punycode",
             "score": punycode_score,
             "reason": punycode_reason
         })
 
-
     if https_score > 0:
-
         risk_factors.append({
             "feature": "HTTPS",
             "score": https_score,
             "reason": https_reason
         })
 
+    # Calculate the original heuristic score before adding threat intelligence.
+    score = min(sum(factor["score"] for factor in risk_factors), 100)
+    heuristic_score = score
 
-# Calculate total score
-    score = sum(
-        factor["score"]
-        for factor in risk_factors
-    )
+    # Build explanations before adding VirusTotal findings.
+    reasons = [length_reason]
 
-
-# Limit score to 100
-    score = min(score, 100)
-
-
-    # ========================================
-    # CREATE EXPLANATIONS
-    # ========================================
-
-    reasons = []
-
-
-    # URL length
-    reasons.append(length_reason)
-
-
-    # IP address
     if is_ip:
-
         reasons.append(ip_reason)
-
-
-    # @ symbol
     if has_at_symbol:
-
         reasons.append(at_reason)
-
-
-    # Subdomain
     if subdomain_count > 0:
-
         reasons.append(subdomain_reason)
-
-
-    # Suspicious TLD
     if suspicious_tld:
-
         reasons.append(tld_reason)
-
-
-    # Suspicious keywords
     if found_keywords:
-
         reasons.append(keyword_reason)
-
-
-    # Punycode
     if has_punycode:
-
         reasons.append(punycode_reason)
-    #https
     if not is_https:
         reasons.append(https_reason)
 
-
     # ========================================
-    # LIMIT SCORE TO 100
+    # ENHANCED RISK ENGINE
     # ========================================
 
-    score = min(score, 100)
-    # --------------------------------
-    # GET FINAL VERDICT
-    # --------------------------------
-
-    verdict, verdict_message = \
-        get_risk_verdict(score)
-    
     virustotal_info = check_virustotal(url)
 
+    if (
+        virustotal_info.get("available")
+        and virustotal_info.get("status") == "completed"
+    ):
+        malicious_count = int(virustotal_info.get("malicious", 0) or 0)
+        suspicious_count = int(virustotal_info.get("suspicious", 0) or 0)
+
+        if malicious_count >= 3:
+            score = max(score, 85)
+            reasons.append(
+                f"VirusTotal reported {malicious_count} malicious detections."
+            )
+            risk_factors.append({
+                "feature": "VirusTotal Threat Intelligence",
+                "score": max(0, 85 - heuristic_score),
+                "reason": (
+                    f"VirusTotal reported {malicious_count} "
+                    "malicious detections."
+                )
+            })
+        elif malicious_count > 0:
+            score = max(score, 60)
+            reasons.append(
+                f"VirusTotal reported {malicious_count} malicious detection(s)."
+            )
+            risk_factors.append({
+                "feature": "VirusTotal Threat Intelligence",
+                "score": max(0, 60 - heuristic_score),
+                "reason": (
+                    f"VirusTotal reported {malicious_count} "
+                    "malicious detection(s)."
+                )
+            })
+        elif suspicious_count > 0:
+            score = max(score, 30)
+            reasons.append(
+                f"VirusTotal reported {suspicious_count} suspicious detection(s)."
+            )
+            risk_factors.append({
+                "feature": "VirusTotal Threat Intelligence",
+                "score": max(0, 30 - heuristic_score),
+                "reason": (
+                    f"VirusTotal reported {suspicious_count} "
+                    "suspicious detection(s)."
+                )
+            })
+
+    score = min(max(score, 0), 100)
+    verdict, verdict_message = get_risk_verdict(score)
+
+    if score > heuristic_score:
+        verdict_message += (
+            " The final score also incorporates VirusTotal threat intelligence."
+        )
 
     # ========================================
     # RETURN RESULT
     # ========================================
 
     return jsonify({
-
-        "message":
-            "URL analyzed successfully",
-
-        "url":
-            url,
-
-        "domain":
-            parsed.hostname,
-        
+        "message": "URL analyzed successfully",
+        "url": url,
+        "domain": parsed.hostname,
         "domain_info": domain_info,
         "rdap_info": rdap_info,
         "ssl_info": ssl_info,
-
-        "protocol":
-            parsed.scheme,
-
-        "path":
-            parsed.path,
-
-        "url_length":
-            len(url),
-
-        "risk_score":
-            score,
+        "protocol": parsed.scheme,
+        "path": parsed.path,
+        "url_length": len(url),
+        "risk_score": score,
         "dns_resolves": dns_resolves,
         "dns_records": dns_records,
         "dns_security": dns_security,
         "redirect_info": redirect_info,
-
-        "reasons":
-            reasons,
-
-        "is_ip_address":
-            is_ip,
+        "reasons": reasons,
+        "is_ip_address": is_ip,
         "ip_info": ip_info,
         "geo_info": geo_info,
-
-        "has_at_symbol":
-            has_at_symbol,
-
-        "subdomain_count":
-            subdomain_count,
-
-        "suspicious_tld":
-            suspicious_tld,
-
-        "found_keywords":
-            found_keywords,
-
-        "has_punycode":
-            has_punycode,
+        "has_at_symbol": has_at_symbol,
+        "subdomain_count": subdomain_count,
+        "suspicious_tld": suspicious_tld,
+        "found_keywords": found_keywords,
+        "has_punycode": has_punycode,
         "is_https": is_https,
         "risk_factors": risk_factors,
         "verdict": verdict,
         "verdict_message": verdict_message,
         "virustotal_info": virustotal_info,
-        
     })
 
 
