@@ -12,6 +12,7 @@ CSV_FILE = "evaluation_urls.csv"
 def evaluate():
     results = []
     counts = Counter()
+    failed_scans = []
 
     with open(CSV_FILE, "r", newline="", encoding="utf-8") as file:
         dataset = list(csv.DictReader(file))
@@ -122,7 +123,13 @@ def evaluate():
                 json={"url": url}
             )
 
+        
         if response.status_code != 200:
+            failed_scans.append({
+                "url": url,
+                "http_status": response.status_code
+            })
+
             print(f"Could not evaluate: {url}")
             print(f"HTTP status: {response.status_code}")
             print("This URL is excluded from the classification metrics.")
@@ -191,6 +198,9 @@ def evaluate():
 
     print("\nMETRICS")
     print(f"Evaluated URLs:       {total}")
+    print(f"Successful scans:    {len(results)}")
+    print(f"Failed scans:        {len(failed_scans)}")
+    print(f"Total dataset URLs:  {len(dataset)}")
     print(f"Accuracy:             {accuracy:.2%}")
     print(f"Precision:            {precision:.2%}")
     print(f"Recall:               {recall:.2%}")
