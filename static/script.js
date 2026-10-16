@@ -490,11 +490,21 @@ document.getElementById("geoASN").textContent =
                 findingsList.appendChild(item);
             });
         }
+    }
         // VirusTotal Threat Intelligence
     const vt = data.virustotal_info || {};
 
-    document.getElementById("vtStatus").textContent =
-        vt.status || (vt.available ? "Available" : "Unavailable");
+    const vtStatus = document.getElementById("vtStatus");
+    const vtMessage = document.getElementById("vtMessage");
+
+    const status = String(vt.status || "").toLowerCase();
+
+    vtStatus.textContent =
+        status === "queued" || status === "in-progress"
+            ? "Processing"
+            : status === "completed"
+                ? "Completed"
+                : status || (vt.available ? "Available" : "Unavailable");
 
     document.getElementById("vtHarmless").textContent =
         vt.harmless ?? "-";
@@ -508,10 +518,16 @@ document.getElementById("geoASN").textContent =
     document.getElementById("vtUndetected").textContent =
         vt.undetected ?? "-";
 
-    document.getElementById("vtMessage").textContent =
-        vt.message || "No VirusTotal information available.";
+    if (status === "queued" || status === "in-progress") {
+        vtMessage.textContent =
+            "VirusTotal analysis is still processing. Detection counts are provisional; do not treat zero detections as a clean result.";
+    } else if (status === "completed") {
+        vtMessage.textContent =
+            vt.message || "VirusTotal analysis completed.";
+    } else {
+        vtMessage.textContent =
+            vt.message || "VirusTotal information is currently unavailable.";
     }
-
 
 }
 function displayDNSRecords(element, records) {

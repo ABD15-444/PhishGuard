@@ -3,6 +3,7 @@ from urllib.parse import urlparse, urljoin
 import ipaddress
 import tldextract
 import dns.resolver
+import dns.exception
 import json
 import urllib.request
 import ssl
@@ -628,8 +629,11 @@ def check_ssl_certificate(domain):
 
     return result
 
+
+
+
 def get_ip_intelligence(domain):
-    """Retrieve IPv4 and IPv6 addresses for a domain."""
+    """Retrieve IPv4 and IPv6 addresses using DNS queries."""
     result = {
         "domain": domain,
         "ipv4_addresses": [],
@@ -638,41 +642,71 @@ def get_ip_intelligence(domain):
         "message": ""
     }
 
-    try:
-        addresses = socket.getaddrinfo(
-            domain,
-            None,
-            type=socket.SOCK_STREAM
-        )
+    record_types = [
+        ("A", "ipv4_addresses"),
+        ("AAAA", "ipv6_addresses")
+    ]
 
-        for address in addresses:
-            ip_version = address[0]
-            ip_address = address[4][0]
+    lookup_errors = []
 
-            if ip_version == socket.AF_INET:
-                if ip_address not in result["ipv4_addresses"]:
-                    result["ipv4_addresses"].append(ip_address)
+    for record_type, result_key in record_types:
+        try:
+            answers = dns.resolver.resolve(
+                domain,
+                record_type,
+                lifetime=5
+            )
 
-            elif ip_version == socket.AF_INET6:
-                if ip_address not in result["ipv6_addresses"]:
-                    result["ipv6_addresses"].append(ip_address)
+            for answer in answers:
+                ip_address = str(answer)
 
-        result["resolved"] = bool(
-            result["ipv4_addresses"] or result["ipv6_addresses"]
-        )
+                try:
+                    parsed_ip = ipaddress.ip_address(ip_address)
+                except ValueError:
+                    continue
 
-        if result["resolved"]:
-            result["message"] = "IP addresses retrieved successfully."
+                if record_type == "A" and parsed_ip.version != 4:
+                    continue
+
+                if record_type == "AAAA":
+                    if parsed_ip.version != 6:
+                        continue
+                    if parsed_ip.ipv4_mapped is not None:
+                        continue
+
+                if ip_address not in result[result_key]:
+                    result[result_key].append(ip_address)
+
+        except dns.resolver.NXDOMAIN:
+            result["message"] = "The domain does not exist."
+            return result
+
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
+            continue
+
+        except (dns.resolver.NoNameservers, dns.exception.Timeout, OSError):
+            lookup_errors.append(record_type)
+
+    result["resolved"] = bool(
+        result["ipv4_addresses"] or result["ipv6_addresses"]
+    )
+
+    if result["resolved"]:
+        if lookup_errors:
+            result["message"] = (
+                "Some DNS lookups failed; available addresses are shown."
+            )
         else:
-            result["message"] = "No IP addresses were found."
-
-    except socket.gaierror:
-        result["message"] = "The domain could not be resolved."
-
-    except (OSError, ValueError):
-        result["message"] = "IP address lookup failed."
+            result["message"] = "IP addresses retrieved successfully."
+    elif lookup_errors:
+        result["message"] = "DNS address lookup failed."
+    else:
+        result["message"] = "No A or AAAA records were found."
 
     return result
+
+
+
 
 def get_ip_geolocation(ip_address):
     """Retrieve approximate location and network details for a public IP."""
@@ -929,14 +963,14 @@ def check_virustotal(url):
     if not api_key:
         return {
             "available": False,
+            "status": "unavailable",
             "message": "VirusTotal API key is not configured."
         }
 
-    headers = {
-        "x-apikey": api_key
-    }
+    headers = {"x-apikey": api_key}
 
     try:
+        # Submit URL for analysis
         response = requests.post(
             "https://www.virustotal.com/api/v3/urls",
             headers=headers,
@@ -944,10 +978,14 @@ def check_virustotal(url):
             timeout=15
         )
 
-        if response.status_code != 200:
+        if response.status_code not in (200, 201):
             return {
                 "available": False,
-                "message": f"VirusTotal submission failed (HTTP {response.status_code})."
+                "status": "unavailable",
+                "message": (
+                    f"VirusTotal submission failed "
+                    f"(HTTP {response.status_code})."
+                )
             }
 
         analysis_id = response.json().get("data", {}).get("id")
@@ -955,9 +993,11 @@ def check_virustotal(url):
         if not analysis_id:
             return {
                 "available": False,
+                "status": "unavailable",
                 "message": "VirusTotal did not return an analysis ID."
             }
 
+        # Retrieve analysis status
         analysis_response = requests.get(
             f"https://www.virustotal.com/api/v3/analyses/{analysis_id}",
             headers=headers,
@@ -967,7 +1007,11 @@ def check_virustotal(url):
         if analysis_response.status_code != 200:
             return {
                 "available": False,
-                "message": "URL submitted, but its analysis could not be retrieved yet."
+                "status": "unavailable",
+                "message": (
+                    "URL submitted, but analysis retrieval failed "
+                    f"(HTTP {analysis_response.status_code})."
+                )
             }
 
         attributes = (
@@ -976,28 +1020,78 @@ def check_virustotal(url):
             .get("attributes", {})
         )
 
-        stats = attributes.get("stats", {})
+        status = str(attributes.get("status", "unknown")).lower()
+        stats = attributes.get("stats") or {}
 
-        return {
-            "available": True,
-            "status": attributes.get("status", "unknown"),
-            "malicious": stats.get("malicious", 0),
-            "suspicious": stats.get("suspicious", 0),
-            "harmless": stats.get("harmless", 0),
-            "undetected": stats.get("undetected", 0),
-            "message": "Analysis retrieved successfully."
+        # Do not present missing counts as zero.
+        counts = {
+            "malicious": stats.get("malicious"),
+            "suspicious": stats.get("suspicious"),
+            "harmless": stats.get("harmless"),
+            "undetected": stats.get("undetected")
         }
 
-    except requests.RequestException:
+        if status in ("queued", "in-progress"):
+            message = (
+                "VirusTotal analysis is still processing. "
+                "Detection counts are provisional."
+            )
+        elif status == "completed":
+            message = "VirusTotal analysis completed."
+        else:
+            message = (
+                f"VirusTotal returned an unexpected analysis status: "
+                f"{status}."
+            )
+
         return {
-            "available": False,
-            "message": "VirusTotal could not be reached. Try again later."
+            "available": status in ("queued", "in-progress", "completed"),
+            "status": status,
+            **counts,
+            "message": message
         }
-    except (ValueError, TypeError):
+
+    except requests.RequestException as error:
+        # Log the error for debugging; never log the API key.
+        app.logger.warning(
+            "VirusTotal request failed: %s",
+            type(error).__name__
+        )
         return {
             "available": False,
+            "status": "unavailable",
+            "message": "VirusTotal request failed. Check connectivity and try again."
+        }
+
+    except (ValueError, TypeError, AttributeError) as error:
+        app.logger.warning(
+            "Unexpected VirusTotal response: %s",
+            type(error).__name__
+        )
+        return {
+            "available": False,
+            "status": "unavailable",
             "message": "VirusTotal returned an unexpected response."
         }
+
+def safe_service_call(function, *args, fallback=None):
+    """Run an analysis service without crashing the complete scan."""
+    try:
+        return function(*args)
+    except Exception:
+        service_name = getattr(
+            function,
+            "__name__",
+            type(function).__name__
+        )
+
+        app.logger.exception(
+            "Analysis service failed: %s",
+            service_name
+        )
+
+        return fallback
+
 
 # ========================================
 # SCAN URL
@@ -1116,16 +1210,35 @@ def scan_url():
         }), 400
 
     domain = parsed.hostname
-    ip_info = get_ip_intelligence(domain)
+
+    ip_info = safe_service_call(
+        get_ip_intelligence,
+        domain,
+        fallback={
+            "domain": domain,
+            "ipv4_addresses": [],
+            "ipv6_addresses": [],
+            "resolved": False,
+            "message": "IP intelligence service unavailable"
+        }
+    )
+
     geo_info = None
 
-    if ip_info["ipv4_addresses"]:
-        geo_info = get_ip_geolocation(
-            ip_info["ipv4_addresses"][0]
-        )
-    elif ip_info["ipv6_addresses"]:
-        geo_info = get_ip_geolocation(
-            ip_info["ipv6_addresses"][0]
+    ip_addresses = (
+        ip_info.get("ipv4_addresses", [])
+        or ip_info.get("ipv6_addresses", [])
+    )
+
+    if ip_addresses:
+        geo_info = safe_service_call(
+            get_ip_geolocation,
+            ip_addresses[0],
+            fallback={
+                "available": False,
+                "ip": ip_addresses[0],
+                "message": "Geolocation service unavailable"
+            }
         )
 
     # ========================================
@@ -1201,17 +1314,80 @@ def scan_url():
     https_score, is_https, https_reason = \
         check_https(parsed.scheme)
 
+
     # --------------------------------
     # DNS CHECK
     # --------------------------------
-    dns_resolves, dns_records, dns_security = check_dns(
-    parsed.hostname)
+
+    dns_result = safe_service_call(
+        check_dns,
+        parsed.hostname,
+        fallback=None
+    )
+
+    if dns_result is None:
+        dns_resolves = False
+        dns_records = {
+            "A": [],
+            "AAAA": [],
+            "MX": [],
+            "NS": [],
+            "CNAME": []
+        }
+        dns_security = {
+            "domain_resolves": False,
+            "has_ipv4": False,
+            "has_ipv6": False,
+            "has_nameservers": False,
+            "has_mail_servers": False,
+            "lookup_status": {
+                "A": "error",
+                "AAAA": "error",
+                "MX": "error",
+                "NS": "error",
+                "CNAME": "error"
+            },
+            "findings": ["DNS analysis unavailable"]
+        }
+    else:
+        dns_resolves, dns_records, dns_security = dns_result
 
     domain_info = get_domain_information(parsed.hostname)
-    rdap_info = get_rdap_information(parsed.hostname)
-    ssl_info = check_ssl_certificate(parsed.hostname)
 
-    redirect_info = analyze_redirects(url)
+    rdap_info = safe_service_call(
+        get_rdap_information,
+        parsed.hostname,
+        fallback={
+            "available": False,
+            "message": "Registration information unavailable"
+        }
+    )
+
+    ssl_info = safe_service_call(
+        check_ssl_certificate,
+        parsed.hostname,
+        fallback={
+            "checked": False,
+            "valid": False,
+            "message": "SSL analysis unavailable"
+        }
+    )
+
+    redirect_info = safe_service_call(
+        analyze_redirects,
+        url,
+        fallback={
+            "checked": False,
+            "redirect_count": 0,
+            "redirect_chain": [],
+            "final_url": url,
+            "https_downgrade": False,
+            "excessive_redirects": False,
+            "error": "Redirect analysis unavailable",
+            "findings": ["Redirect analysis could not be completed"]
+        }
+    )
+
 
 
     # ========================================
@@ -1314,7 +1490,14 @@ def scan_url():
     # ENHANCED RISK ENGINE
     # ========================================
 
-    virustotal_info = check_virustotal(url)
+    virustotal_info = safe_service_call(
+        check_virustotal,
+        url,
+        fallback={
+            "available": False,
+            "message": "VirusTotal analysis unavailable"
+        }
+    )
 
     if (
         virustotal_info.get("available")
