@@ -180,8 +180,12 @@ def evaluate():
         fp / (fp + tn) if fp + tn else 0
     )
 
-    print("\nPHISHGUARD DETECTION EVALUATION")
-    print("=" * 48)
+    print("\nPHISHGUARD SYNTHETIC FUNCTIONAL BENCHMARK (30 URLs)")
+    print("=" * 60)
+    print("Methodology: Offline repeatable functional suite using mocked external services.")
+    print("Dataset Scope: 10 synthetic phishing URLs, 20 curated legitimate URLs.")
+    print("Limitation: Establishes rule-engine correctness; does not imply 100% production accuracy.")
+    print("=" * 60)
 
     for item in results:
         actual_label = "PHISHING" if item["actual"] else "LEGITIMATE"

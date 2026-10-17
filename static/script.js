@@ -1,49 +1,49 @@
+// PhishGuard Frontend Controller — Modern Real-Time Analysis Interface
+
 const scanButton = document.getElementById("scanButton");
 const urlInput = document.getElementById("urlInput");
-
 const errorMessage = document.getElementById("errorMessage");
 const resultSection = document.getElementById("resultSection");
+const scanningLoader = document.getElementById("scanningLoader");
+const scanTimestamp = document.getElementById("scanTimestamp");
 
+// Target details
 const resultUrl = document.getElementById("resultUrl");
 const resultDomain = document.getElementById("resultDomain");
 const resultProtocol = document.getElementById("resultProtocol");
 const resultPath = document.getElementById("resultPath");
 const resultLength = document.getElementById("resultLength");
 
+// Verdict elements
 const resultScore = document.getElementById("resultScore");
 const resultVerdict = document.getElementById("resultVerdict");
 const resultVerdictMessage = document.getElementById("resultVerdictMessage");
+const verdictPill = document.getElementById("verdictPill");
+const verdictIcon = document.getElementById("verdictIcon");
+const riskBar = document.getElementById("riskBar");
 
+// Findings and factors
 const resultReason = document.getElementById("resultReason");
 const riskFactors = document.getElementById("riskFactors");
 
-const riskBar = document.getElementById("riskBar");
-const verdictIcon = document.getElementById("verdictIcon");
-
+// DNS elements
 const dnsStatus = document.getElementById("dnsStatus");
-
 const dnsA = document.getElementById("dnsA");
 const dnsAAAA = document.getElementById("dnsAAAA");
 const dnsMX = document.getElementById("dnsMX");
 const dnsNS = document.getElementById("dnsNS");
 const dnsCNAME = document.getElementById("dnsCNAME");
 
+// Domain & RDAP elements
+const registeredDomain = document.getElementById("registeredDomain");
+const domainSubdomain = document.getElementById("domainSubdomain");
+const domainTLD = document.getElementById("domainTLD");
 const domainAge = document.getElementById("domainAge");
 const creationDate = document.getElementById("creationDate");
 const expirationDate = document.getElementById("expirationDate");
 const registrar = document.getElementById("registrar");
 
-
-const registeredDomain =
-    document.getElementById("registeredDomain");
-
-const domainSubdomain =
-    document.getElementById("domainSubdomain");
-
-const domainTLD =
-    document.getElementById("domainTLD");
-
-
+// SSL elements
 const sslStatus = document.getElementById("sslStatus");
 const sslDomainMatch = document.getElementById("sslDomainMatch");
 const sslIssuer = document.getElementById("sslIssuer");
@@ -53,506 +53,461 @@ const sslValidUntil = document.getElementById("sslValidUntil");
 const sslDaysRemaining = document.getElementById("sslDaysRemaining");
 const sslMessage = document.getElementById("sslMessage");
 
+// Event Listeners
+if (scanButton) {
+    scanButton.addEventListener("click", scanURL);
+}
 
+if (urlInput) {
+    urlInput.addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+            scanURL();
+        }
+    });
+}
 
-// Scan button
-scanButton.addEventListener("click", scanURL);
-
-
-// Allow pressing Enter
-urlInput.addEventListener("keypress", function (event) {
-
-    if (event.key === "Enter") {
-        scanURL();
-    }
-
+// Preset Pills Demo Buttons
+document.querySelectorAll(".preset-pill").forEach((button) => {
+    button.addEventListener("click", () => {
+        const targetUrl = button.getAttribute("data-url");
+        if (targetUrl && urlInput) {
+            urlInput.value = targetUrl;
+            scanURL();
+        }
+    });
 });
 
-
 async function scanURL() {
+    const rawUrl = urlInput ? urlInput.value.trim() : "";
 
-    const url = urlInput.value.trim();
+    // Clear previous errors
+    if (errorMessage) {
+        errorMessage.textContent = "";
+    }
 
-    // Clear previous error
-    errorMessage.textContent = "";
-
-    // Validate input
-    if (!url) {
-
-        errorMessage.textContent = "Please enter a URL.";
-
+    if (!rawUrl) {
+        if (errorMessage) {
+            errorMessage.textContent = "Please enter a URL to scan.";
+        }
         return;
     }
 
+    // Update UI for loading state
+    if (scanButton) {
+        scanButton.disabled = true;
+        scanButton.querySelector(".btn-text").textContent = "Analyzing...";
+    }
 
-    // Disable button while scanning
-    scanButton.disabled = true;
-    scanButton.textContent = "Scanning...";
+    if (scanningLoader) {
+        scanningLoader.classList.remove("hidden");
+    }
 
+    if (resultSection) {
+        resultSection.classList.add("hidden");
+    }
 
     try {
-
         const response = await fetch("/api/scan", {
-
             method: "POST",
-
             headers: {
                 "Content-Type": "application/json"
             },
-
-            body: JSON.stringify({
-                url: url
-            })
-
+            body: JSON.stringify({ url: rawUrl })
         });
 
-        
         const responseText = await response.text();
-        console.log("HTTP status:", response.status);
-        console.log("Response:", responseText);
+        let data;
 
-        const data = JSON.parse(responseText);
-
-        if (!response.ok) {
-
-            throw new Error(data.error || "Something went wrong.");
-
+        try {
+            data = JSON.parse(responseText);
+        } catch (jsonErr) {
+            throw new Error("Invalid server response format. Check server logs.");
         }
 
+        if (!response.ok) {
+            throw new Error(data.error || `Scan request failed with HTTP ${response.status}.`);
+        }
 
         displayResult(data);
 
-
     } catch (error) {
-
-        errorMessage.textContent = error.message;
-
+        if (errorMessage) {
+            errorMessage.textContent = error.message;
+        }
+    } finally {
+        if (scanButton) {
+            scanButton.disabled = false;
+            scanButton.querySelector(".btn-text").textContent = "Analyze URL";
+        }
+        if (scanningLoader) {
+            scanningLoader.classList.add("hidden");
+        }
     }
-
-
-    scanButton.disabled = false;
-    scanButton.textContent = "Scan URL";
-
 }
 
-
-
 function displayResult(data) {
+    if (!resultSection) return;
 
     // Show result section
     resultSection.classList.remove("hidden");
 
+    if (scanTimestamp) {
+        scanTimestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
 
     // URL information
-    resultUrl.textContent = data.url;
+    if (resultUrl) resultUrl.textContent = data.url || "-";
+    if (resultDomain) resultDomain.textContent = data.domain || "-";
+    if (resultProtocol) resultProtocol.textContent = (data.protocol || "").toUpperCase();
+    if (resultPath) resultPath.textContent = data.path || "/";
+    if (resultLength) resultLength.textContent = `${data.url_length} characters`;
 
-    resultDomain.textContent = data.domain;
+    // Domain Info
+    const dInfo = data.domain_info || {};
+    if (registeredDomain) registeredDomain.textContent = dInfo.registered_domain || "-";
+    if (domainSubdomain) domainSubdomain.textContent = dInfo.subdomain || "None";
+    if (domainTLD) domainTLD.textContent = dInfo.tld ? `.${dInfo.tld}` : "-";
 
-    resultProtocol.textContent = data.protocol;
-
-    resultPath.textContent = data.path || "/";
-
-    resultLength.textContent = data.url_length + " characters";
-
-    // Domain Information
-    registeredDomain.textContent =data.domain_info.registered_domain || "-";
-
-    domainSubdomain.textContent =data.domain_info.subdomain || "None";
-
-    domainTLD.textContent =
-    data.domain_info.tld
-        ? "." + data.domain_info.tld
-        : "-";
-
-
-    
-    // Domain Registration Information
+    // Domain Registration (RDAP)
     const rdap = data.rdap_info;
-
     if (rdap && rdap.available) {
-        if (rdap.domain_age_days !== null &&
-            rdap.domain_age_days !== undefined) {
-
+        if (rdap.domain_age_days !== null && rdap.domain_age_days !== undefined) {
             const days = rdap.domain_age_days;
             const years = Math.floor(days / 365);
-
-            domainAge.textContent =
-                years >= 1
-                    ? `${years} years (${days} days)`
-                    : `${days} days`;
-
+            if (domainAge) {
+                domainAge.textContent = years >= 1 ? `${years} years (${days} days)` : `${days} days`;
+            }
         } else {
-            domainAge.textContent = "Unavailable";
+            if (domainAge) domainAge.textContent = "Unavailable";
         }
 
-        creationDate.textContent =
-            rdap.creation_date || "Unavailable";
-
-        expirationDate.textContent =
-            rdap.expiration_date || "Unavailable";
-
-        registrar.textContent =
-            rdap.registrar || "Unavailable";
-
+        if (creationDate) creationDate.textContent = rdap.creation_date || "Unavailable";
+        if (expirationDate) expirationDate.textContent = rdap.expiration_date || "Unavailable";
+        if (registrar) registrar.textContent = rdap.registrar || "Unavailable";
     } else {
-        domainAge.textContent = "Unavailable";
-        creationDate.textContent = "Unavailable";
-        expirationDate.textContent = "Unavailable";
-        registrar.textContent = "Unavailable";
+        if (domainAge) domainAge.textContent = "Unavailable";
+        if (creationDate) creationDate.textContent = "Unavailable";
+        if (expirationDate) expirationDate.textContent = "Unavailable";
+        if (registrar) registrar.textContent = "Unavailable";
     }
 
     // IP & Network Intelligence
-const ipInfo = data.ip_info || {};
-
-document.getElementById("ipDomain").textContent =
-    ipInfo.domain || data.domain || "Unavailable";
-
-document.getElementById("ipResolutionStatus").textContent =
-    ipInfo.resolved ? "Resolved" : "Check DNS results";
-
-const ipv4List = document.getElementById("ipv4Addresses");
-ipv4List.replaceChildren();
-
-(ipInfo.ipv4_addresses || []).forEach((ip) => {
-    const li = document.createElement("li");
-    li.textContent = ip;
-    ipv4List.appendChild(li);
-});
-
-const ipv6List = document.getElementById("ipv6Addresses");
-ipv6List.replaceChildren();
-
-(ipInfo.ipv6_addresses || []).forEach((ip) => {
-    const li = document.createElement("li");
-    li.textContent = ip;
-    ipv6List.appendChild(li);
-});
-
-document.getElementById("ipMessage").textContent =
-    ipInfo.message || "IP analysis completed";
-    // IP Geolocation and Network Information
-const geoInfo = data.geo_info;
-
-document.getElementById("geoCity").textContent =
-    geoInfo?.city || "Unavailable";
-
-document.getElementById("geoRegion").textContent =
-    geoInfo?.region || "Unavailable";
-
-document.getElementById("geoCountry").textContent =
-    geoInfo?.country || "Unavailable";
-
-document.getElementById("geoCountryCode").textContent =
-    geoInfo?.country_code || "Unavailable";
-
-document.getElementById("geoOrganization").textContent =
-    geoInfo?.organization || "Unavailable";
-
-document.getElementById("geoASN").textContent =
-    geoInfo?.asn || "Unavailable";
-    // Redirect Analysis
-    const redirect = data.redirect_info;
-
-    document.getElementById("redirectCount").textContent =
-        redirect.redirect_count;
-
-    document.getElementById("redirectFinalUrl").textContent =
-        redirect.final_url || "Unavailable";
-
-    document.getElementById("redirectDowngrade").textContent =
-        redirect.https_downgrade ? "Yes" : "No";
-
-    document.getElementById("redirectExcessive").textContent =
-        redirect.excessive_redirects ? "Yes" : "No";
-
-    document.getElementById("redirectStatus").textContent =
-        redirect.error ? "Incomplete" : "Completed";
-
-    const findingsList = document.getElementById("redirectFindings");
-    findingsList.replaceChildren();
-
-    (redirect.findings || []).forEach((finding) => {
-        const li = document.createElement("li");
-        li.textContent = finding;
-        findingsList.appendChild(li);
-    });
-
-    const chainList = document.getElementById("redirectChain");
-    chainList.replaceChildren();
-
-    (redirect.redirect_chain || []).forEach((item) => {
-        const li = document.createElement("li");
-        li.textContent =
-            `${item.status_code}: ${item.from} → ${item.to}`;
-        chainList.appendChild(li);
-    });
-
-    if (!redirect.redirect_chain || redirect.redirect_chain.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "No redirects recorded.";
-        chainList.appendChild(li);
-    }
-
-    // SSL/TLS Analysis
-    const ssl = data.ssl_info;
-
-    if (ssl && ssl.checked) {
-        sslStatus.textContent = ssl.valid
-            ? "Valid"
-            : "Invalid";
-
-        sslStatus.style.color = ssl.valid
-            ? "#047857"
-            : "#dc2626";
-
-        sslDomainMatch.textContent = ssl.domain_matches
-            ? "Yes"
-            : "No";
-
-        sslIssuer.textContent = ssl.issuer || "Unavailable";
-        sslSubject.textContent = ssl.subject || "Unavailable";
-        sslValidFrom.textContent = ssl.valid_from || "Unavailable";
-        sslValidUntil.textContent = ssl.valid_until || "Unavailable";
-
-        sslDaysRemaining.textContent =
-            ssl.days_until_expiry !== null &&
-            ssl.days_until_expiry !== undefined
-                ? ssl.days_until_expiry + " days"
-                : "Unavailable";
-
-        sslMessage.textContent = ssl.message || "";
-
-    } else {
-        sslStatus.textContent = "Unavailable";
-        sslDomainMatch.textContent = "Unavailable";
-        sslIssuer.textContent = "Unavailable";
-        sslSubject.textContent = "Unavailable";
-        sslValidFrom.textContent = "Unavailable";
-        sslValidUntil.textContent = "Unavailable";
-        sslDaysRemaining.textContent = "Unavailable";
-        sslMessage.textContent =
-            ssl?.message || "Certificate information could not be retrieved.";
-    }
-
-
-    // Risk score
-    resultScore.textContent = data.risk_score + "/100";
-
-
-    // Verdict
-    resultVerdict.textContent = data.verdict;
-
-    resultVerdictMessage.textContent = data.verdict_message;
-
-
-    // Risk bar
-    riskBar.style.width = data.risk_score + "%";
-
-
-    // Verdict icon
-    if (data.verdict === "HIGH RISK") {
-
-        verdictIcon.textContent = "🚨";
-
-    } else if (data.verdict === "SUSPICIOUS") {
-
-        verdictIcon.textContent = "⚠️";
-
-    } else {
-
-        verdictIcon.textContent = "🛡️";
-
-    }
-
-
-    // Risk factors
-    riskFactors.innerHTML = "";
-
-
-    if (data.risk_factors.length === 0) {
-
-        riskFactors.innerHTML = `
-            <div class="no-risk">
-                ✓ No suspicious risk factors detected
-            </div>
-        `;
-
-    } else {
-
-        data.risk_factors.forEach(function (factor) {
-
-            const factorElement = document.createElement("div");
-
-            factorElement.className = "risk-factor";
-
-            factorElement.innerHTML = `
-
-                <div class="risk-factor-left">
-
-                    <strong>
-                        ${factor.feature}
-                    </strong>
-
-                    <span>
-                        ${factor.reason}
-                    </span>
-
-                </div>
-
-                <div class="risk-factor-score">
-                    +${factor.score}
-                </div>
-
-            `;
-
-            riskFactors.appendChild(factorElement);
-
-        });
-
-    }
-
-
-    // Analysis reasons
-    resultReason.innerHTML = "";
-
-
-    data.reasons.forEach(function (reason) {
-
-        const reasonElement = document.createElement("div");
-
-        reasonElement.className = "analysis-item";
-
-        reasonElement.textContent = "• " + reason;
-
-        resultReason.appendChild(reasonElement);
-
-    });
-
-
-    // Scroll to result
-    resultSection.scrollIntoView({
-        behavior: "smooth"
-    });
-
-        // DNS Analysis
-    if (data.dns_resolves) {
-
-        dnsStatus.textContent = "✓ Resolves";
-        dnsStatus.style.color = "#047857";
-
-    } else {
-
-        dnsStatus.textContent = "✗ Does not resolve";
-        dnsStatus.style.color = "#dc2626";
-
-    }
-
-
-    displayDNSRecords(dnsA, data.dns_records.A);
-    displayDNSRecords(dnsAAAA, data.dns_records.AAAA);
-    displayDNSRecords(dnsMX, data.dns_records.MX);
-    displayDNSRecords(dnsNS, data.dns_records.NS);
-    displayDNSRecords(dnsCNAME, data.dns_records.CNAME);
-    
-    // DNS Security Checks
-    const dnsSecurity = data.dns_security;
-
-    if (dnsSecurity) {
-        document.getElementById("dnsSecurityResolves").textContent =
-            dnsSecurity.domain_resolves ? "Yes" : "No";
-
-        document.getElementById("dnsSecurityIPv4").textContent =
-            dnsSecurity.has_ipv4 ? "Found" : "Not found";
-
-        document.getElementById("dnsSecurityIPv6").textContent =
-            dnsSecurity.has_ipv6 ? "Found" : "Not found";
-
-        document.getElementById("dnsSecurityNameservers").textContent =
-            dnsSecurity.has_nameservers ? "Found" : "Not found";
-
-        document.getElementById("dnsSecurityMail").textContent =
-            dnsSecurity.has_mail_servers ? "Found" : "Not found";
-
-        const findingsList =
-            document.getElementById("dnsSecurityFindings");
-
-        findingsList.replaceChildren();
-
-        if (dnsSecurity.findings.length === 0) {
-            const item = document.createElement("li");
-            item.textContent =
-                "No issues flagged by current checks.";
-            findingsList.appendChild(item);
+    const ipInfo = data.ip_info || {};
+    const ipDomainElem = document.getElementById("ipDomain");
+    if (ipDomainElem) ipDomainElem.textContent = ipInfo.domain || data.domain || "Unavailable";
+
+    const ipResStatus = document.getElementById("ipResolutionStatus");
+    if (ipResStatus) ipResStatus.textContent = ipInfo.resolved ? "Resolved" : "Unresolved / DNS Failed";
+
+    const ipv4List = document.getElementById("ipv4Addresses");
+    if (ipv4List) {
+        ipv4List.replaceChildren();
+        const v4 = ipInfo.ipv4_addresses || [];
+        if (v4.length === 0) {
+            const li = document.createElement("li");
+            li.textContent = "None discovered";
+            ipv4List.appendChild(li);
         } else {
-            dnsSecurity.findings.forEach(function (finding) {
-                const item = document.createElement("li");
-                item.textContent = finding;
-                findingsList.appendChild(item);
+            v4.forEach(ip => {
+                const li = document.createElement("li");
+                li.textContent = ip;
+                ipv4List.appendChild(li);
             });
         }
     }
-        // VirusTotal Threat Intelligence
-    const vt = data.virustotal_info || {};
 
-    const vtStatus = document.getElementById("vtStatus");
-    const vtMessage = document.getElementById("vtMessage");
-
-    const status = String(vt.status || "").toLowerCase();
-
-    vtStatus.textContent =
-        status === "queued" || status === "in-progress"
-            ? "Processing"
-            : status === "completed"
-                ? "Completed"
-                : status || (vt.available ? "Available" : "Unavailable");
-
-    document.getElementById("vtHarmless").textContent =
-        vt.harmless ?? "-";
-
-    document.getElementById("vtMalicious").textContent =
-        vt.malicious ?? "-";
-
-    document.getElementById("vtSuspicious").textContent =
-        vt.suspicious ?? "-";
-
-    document.getElementById("vtUndetected").textContent =
-        vt.undetected ?? "-";
-
-    if (status === "queued" || status === "in-progress") {
-        vtMessage.textContent =
-            "VirusTotal analysis is still processing. Detection counts are provisional; do not treat zero detections as a clean result.";
-    } else if (status === "completed") {
-        vtMessage.textContent =
-            vt.message || "VirusTotal analysis completed.";
-    } else {
-        vtMessage.textContent =
-            vt.message || "VirusTotal information is currently unavailable.";
+    const ipv6List = document.getElementById("ipv6Addresses");
+    if (ipv6List) {
+        ipv6List.replaceChildren();
+        const v6 = ipInfo.ipv6_addresses || [];
+        if (v6.length === 0) {
+            const li = document.createElement("li");
+            li.textContent = "None discovered";
+            ipv6List.appendChild(li);
+        } else {
+            v6.forEach(ip => {
+                const li = document.createElement("li");
+                li.textContent = ip;
+                ipv6List.appendChild(li);
+            });
+        }
     }
 
+    const ipMsg = document.getElementById("ipMessage");
+    if (ipMsg) ipMsg.textContent = ipInfo.message || "IP network analysis completed.";
+
+    // Geolocation
+    const geo = data.geo_info;
+    const geoCity = document.getElementById("geoCity");
+    const geoRegion = document.getElementById("geoRegion");
+    const geoCountry = document.getElementById("geoCountry");
+    const geoCountryCode = document.getElementById("geoCountryCode");
+    const geoOrg = document.getElementById("geoOrganization");
+    const geoASN = document.getElementById("geoASN");
+
+    if (geoCity) geoCity.textContent = geo?.city || "Unavailable";
+    if (geoRegion) geoRegion.textContent = geo?.region || "Unavailable";
+    if (geoCountry) geoCountry.textContent = geo?.country || "Unavailable";
+    if (geoCountryCode) geoCountryCode.textContent = geo?.country_code || "Unavailable";
+    if (geoOrg) geoOrg.textContent = geo?.organization || "Unavailable";
+    if (geoASN) geoASN.textContent = geo?.asn || "Unavailable";
+
+    // Redirect Analysis
+    const redirect = data.redirect_info || {};
+    const rCount = document.getElementById("redirectCount");
+    const rFinal = document.getElementById("redirectFinalUrl");
+    const rDown = document.getElementById("redirectDowngrade");
+    const rExcess = document.getElementById("redirectExcessive");
+    const rStatus = document.getElementById("redirectStatus");
+
+    if (rCount) rCount.textContent = redirect.redirect_count ?? 0;
+    if (rFinal) rFinal.textContent = redirect.final_url || data.url || "Unavailable";
+    if (rDown) rDown.textContent = redirect.https_downgrade ? "Yes (Downgrade Detected)" : "No";
+    if (rExcess) rExcess.textContent = redirect.excessive_redirects ? "Yes (Limit Reached)" : "No";
+    if (rStatus) rStatus.textContent = redirect.error ? "Incomplete / Blocked" : "Completed";
+
+    const findingsList = document.getElementById("redirectFindings");
+    if (findingsList) {
+        findingsList.replaceChildren();
+        (redirect.findings || []).forEach(f => {
+            const li = document.createElement("li");
+            li.textContent = f;
+            findingsList.appendChild(li);
+        });
+        if (!redirect.findings || redirect.findings.length === 0) {
+            const li = document.createElement("li");
+            li.textContent = "No redirect anomalies detected.";
+            findingsList.appendChild(li);
+        }
+    }
+
+    const chainList = document.getElementById("redirectChain");
+    if (chainList) {
+        chainList.replaceChildren();
+        const chain = redirect.redirect_chain || [];
+        if (chain.length === 0) {
+            const li = document.createElement("li");
+            li.textContent = "Direct destination reached without hops.";
+            chainList.appendChild(li);
+        } else {
+            chain.forEach(hop => {
+                const li = document.createElement("li");
+                li.textContent = `[HTTP ${hop.status_code}] ${hop.from} → ${hop.to}`;
+                chainList.appendChild(li);
+            });
+        }
+    }
+
+    // SSL / TLS Analysis
+    const ssl = data.ssl_info;
+    if (ssl && ssl.checked) {
+        if (sslStatus) {
+            sslStatus.textContent = ssl.valid ? "Valid" : "Invalid / Untrusted";
+            sslStatus.style.color = ssl.valid ? "var(--color-safe)" : "var(--color-risk)";
+        }
+        if (sslDomainMatch) sslDomainMatch.textContent = ssl.domain_matches ? "Yes" : "No";
+        if (sslIssuer) sslIssuer.textContent = ssl.issuer || "Unavailable";
+        if (sslSubject) sslSubject.textContent = ssl.subject || "Unavailable";
+        if (sslValidFrom) sslValidFrom.textContent = ssl.valid_from || "Unavailable";
+        if (sslValidUntil) sslValidUntil.textContent = ssl.valid_until || "Unavailable";
+        if (sslDaysRemaining) {
+            sslDaysRemaining.textContent = (ssl.days_until_expiry !== null && ssl.days_until_expiry !== undefined)
+                ? `${ssl.days_until_expiry} days`
+                : "Unavailable";
+        }
+        if (sslMessage) sslMessage.textContent = ssl.message || "TLS certificate verified successfully.";
+    } else {
+        if (sslStatus) {
+            sslStatus.textContent = "Unavailable / Skipped";
+            sslStatus.style.color = "var(--text-muted)";
+        }
+        if (sslDomainMatch) sslDomainMatch.textContent = "Unavailable";
+        if (sslIssuer) sslIssuer.textContent = "Unavailable";
+        if (sslSubject) sslSubject.textContent = "Unavailable";
+        if (sslValidFrom) sslValidFrom.textContent = "Unavailable";
+        if (sslValidUntil) sslValidUntil.textContent = "Unavailable";
+        if (sslDaysRemaining) sslDaysRemaining.textContent = "Unavailable";
+        if (sslMessage) sslMessage.textContent = ssl?.message || "Certificate details could not be retrieved.";
+    }
+
+    // Verdict, Score & Risk Bar styling
+    const score = Number(data.risk_score) || 0;
+    if (resultScore) resultScore.textContent = score;
+    if (resultVerdict) resultVerdict.textContent = data.verdict;
+    if (resultVerdictMessage) resultVerdictMessage.textContent = data.verdict_message;
+
+    if (riskBar) {
+        riskBar.style.width = `${Math.min(Math.max(score, 0), 100)}%`;
+    }
+
+    if (verdictPill) {
+        verdictPill.classList.remove("verdict-safe", "verdict-suspicious", "verdict-high-risk");
+    }
+
+    if (data.verdict === "HIGH RISK") {
+        if (verdictIcon) verdictIcon.textContent = "🚨";
+        if (verdictPill) verdictPill.classList.add("verdict-high-risk");
+        if (riskBar) riskBar.style.backgroundColor = "var(--color-risk)";
+    } else if (data.verdict === "SUSPICIOUS") {
+        if (verdictIcon) verdictIcon.textContent = "⚠️";
+        if (verdictPill) verdictPill.classList.add("verdict-suspicious");
+        if (riskBar) riskBar.style.backgroundColor = "var(--color-suspicious)";
+    } else {
+        if (verdictIcon) verdictIcon.textContent = "🛡️";
+        if (verdictPill) verdictPill.classList.add("verdict-safe");
+        if (riskBar) riskBar.style.backgroundColor = "var(--color-safe)";
+    }
+
+    // Risk Factors breakdown
+    if (riskFactors) {
+        riskFactors.innerHTML = "";
+        const factors = data.risk_factors || [];
+
+        if (factors.length === 0) {
+            riskFactors.innerHTML = `
+                <div class="no-risk">
+                    ✓ No suspicious risk factors detected by active heuristics.
+                </div>
+            `;
+        } else {
+            factors.forEach(factor => {
+                const el = document.createElement("div");
+                el.className = "risk-factor";
+                el.innerHTML = `
+                    <div class="risk-factor-left">
+                        <strong>${escapeHTML(factor.feature)}</strong>
+                        <span>${escapeHTML(factor.reason)}</span>
+                    </div>
+                    <div class="risk-factor-score">
+                        +${factor.score}
+                    </div>
+                `;
+                riskFactors.appendChild(el);
+            });
+        }
+    }
+
+    // Heuristic Analysis Reasons
+    if (resultReason) {
+        resultReason.innerHTML = "";
+        (data.reasons || []).forEach(reason => {
+            const el = document.createElement("div");
+            el.className = "analysis-item";
+            el.textContent = `• ${reason}`;
+            resultReason.appendChild(el);
+        });
+    }
+
+    // DNS Analysis
+    if (dnsStatus) {
+        if (data.dns_resolves) {
+            dnsStatus.textContent = "✓ Resolves Successfully";
+            dnsStatus.style.color = "var(--color-safe)";
+        } else {
+            dnsStatus.textContent = "✗ Domain Does Not Resolve";
+            dnsStatus.style.color = "var(--color-risk)";
+        }
+    }
+
+    const records = data.dns_records || {};
+    displayDNSRecords(dnsA, records.A);
+    displayDNSRecords(dnsAAAA, records.AAAA);
+    displayDNSRecords(dnsMX, records.MX);
+    displayDNSRecords(dnsNS, records.NS);
+    displayDNSRecords(dnsCNAME, records.CNAME);
+
+    // DNS Security Checks
+    const dnsSec = data.dns_security || {};
+    const dResolves = document.getElementById("dnsSecurityResolves");
+    const dIPv4 = document.getElementById("dnsSecurityIPv4");
+    const dIPv6 = document.getElementById("dnsSecurityIPv6");
+    const dNS = document.getElementById("dnsSecurityNameservers");
+    const dMX = document.getElementById("dnsSecurityMail");
+
+    if (dResolves) dResolves.textContent = dnsSec.domain_resolves ? "Yes" : "No";
+    if (dIPv4) dIPv4.textContent = dnsSec.has_ipv4 ? "Found" : "None";
+    if (dIPv6) dIPv6.textContent = dnsSec.has_ipv6 ? "Found" : "None";
+    if (dNS) dNS.textContent = dnsSec.has_nameservers ? "Found" : "None";
+    if (dMX) dMX.textContent = dnsSec.has_mail_servers ? "Found" : "None";
+
+    const dnsFindingsList = document.getElementById("dnsSecurityFindings");
+    if (dnsFindingsList) {
+        dnsFindingsList.replaceChildren();
+        const findings = dnsSec.findings || [];
+        if (findings.length === 0) {
+            const li = document.createElement("li");
+            li.textContent = "No DNS configuration anomalies flagged.";
+            dnsFindingsList.appendChild(li);
+        } else {
+            findings.forEach(f => {
+                const li = document.createElement("li");
+                li.textContent = f;
+                dnsFindingsList.appendChild(li);
+            });
+        }
+    }
+
+    // VirusTotal Threat Intelligence
+    const vt = data.virustotal_info || {};
+    const vtStatus = document.getElementById("vtStatus");
+    const vtMessage = document.getElementById("vtMessage");
+    const vtStatusStr = String(vt.status || "").toLowerCase();
+
+    if (vtStatus) {
+        vtStatus.textContent = (vtStatusStr === "queued" || vtStatusStr === "in-progress")
+            ? "Processing"
+            : (vtStatusStr === "completed")
+                ? "Completed"
+                : vtStatusStr || (vt.available ? "Available" : "Unavailable");
+    }
+
+    const vtHarmless = document.getElementById("vtHarmless");
+    const vtMalicious = document.getElementById("vtMalicious");
+    const vtSuspicious = document.getElementById("vtSuspicious");
+    const vtUndetected = document.getElementById("vtUndetected");
+
+    if (vtHarmless) vtHarmless.textContent = vt.harmless ?? "-";
+    if (vtMalicious) vtMalicious.textContent = vt.malicious ?? "-";
+    if (vtSuspicious) vtSuspicious.textContent = vt.suspicious ?? "-";
+    if (vtUndetected) vtUndetected.textContent = vt.undetected ?? "-";
+
+    if (vtMessage) {
+        if (vtStatusStr === "queued" || vtStatusStr === "in-progress") {
+            vtMessage.textContent = "VirusTotal scan is currently processing in queue. Provisional zero detection counts must not be treated as clean results.";
+        } else if (vtStatusStr === "completed") {
+            vtMessage.textContent = vt.message || "Threat intelligence scan completed.";
+        } else {
+            vtMessage.textContent = vt.message || "Threat intelligence service unavailable.";
+        }
+    }
+
+    // Smooth scroll to results
+    resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 function displayDNSRecords(element, records) {
+    if (!element) return;
+    element.innerHTML = "";
 
     if (!records || records.length === 0) {
-
         element.textContent = "No records found";
-
         return;
     }
 
-
-    element.innerHTML = "";
-
-
-    records.forEach(function (record) {
-
-        const recordElement = document.createElement("div");
-
-        recordElement.className = "dns-value";
-
-        recordElement.textContent = record;
-
-        element.appendChild(recordElement);
-
+    records.forEach(rec => {
+        const div = document.createElement("div");
+        div.className = "dns-value";
+        div.textContent = rec;
+        element.appendChild(div);
     });
+}
 
+function escapeHTML(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }

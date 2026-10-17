@@ -1,5 +1,39 @@
+# Virtual environment
 venv/
+ENV/
+env/
+
+# Python bytecode & caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment secrets
 .env
+.env.local
+.env.*.local
+!.env.example
+
+# macOS metadata
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Large datasets & raw downloads (exceeding standard repository hygiene limits)
+tranco_domains.csv
+tranco_validation_download.csv
+verified_online*.csv
+phishing_urls_clean.csv
+independent_validation_candidates.csv
+legitimate_urls_candidates.csv
+ml_dataset.csv
+ml_dataset_domain_clean.csv
+ml_train.csv
+ml_test.csv
+
+# Binary machine learning model artifacts
+*.joblib
+
+# Logs and runtime traces
+*.log

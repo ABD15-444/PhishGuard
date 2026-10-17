@@ -2,550 +2,547 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard — Real-Time Phishing Attack Detection & URL Analysis Tool</title>
+    <meta name="description" content="PhishGuard is an advanced URL security analysis system combining lexical heuristics, network intelligence, TLS inspection, redirect tracking, and VirusTotal threat intelligence.">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <!-- Modern Typography: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-    <title>PhishGuard</title>
-
-    <link
-        rel="stylesheet"
-        href="{{ url_for('static', filename='style.css') }}"
-    >
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
-
 <body>
+    <!-- BACKGROUND ACCENT GLOWS -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
 
-    <div class="container">
+    <div class="app-layout">
+        <!-- NAVIGATION BAR -->
+        <header class="navbar">
+            <div class="brand-group">
+                <div class="brand-icon">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M9 12l2 2 4-4"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>PhishGuard</h1>
+                    <span class="brand-subtitle">Cybersecurity URL Intelligence Engine</span>
+                </div>
+            </div>
 
-        <!-- HEADER -->
-        <header>
-
-            <h1>🛡️ PhishGuard</h1>
-
-            <p>
-                Real-Time Phishing Attack Detection
-                and URL Analysis Tool
-            </p>
-
+            <div class="nav-badges">
+                <span class="status-badge live-status">
+                    <span class="pulse-dot"></span> Engine Online
+                </span>
+                <span class="version-tag">Multi-Signal Core v2.4</span>
+            </div>
         </header>
 
+        <!-- SCANNER HERO -->
+        <main class="main-content">
+            <section class="scanner-card">
+                <div class="scanner-header">
+                    <h2>Inspect URL Security Posture</h2>
+                    <p class="description">
+                        Analyze suspicious links in real-time across lexical structure, network intelligence, DNS resolution, SSL/TLS certificates, redirect chains, and VirusTotal threat telemetry.
+                    </p>
+                </div>
 
-        <!-- SCANNER -->
-        <section class="scanner">
+                <!-- URL INPUT FORM -->
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <span class="input-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                        </span>
+                        <input
+                            type="text"
+                            id="urlInput"
+                            placeholder="Enter URL to analyze (e.g., https://secure-bank.example/login)"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                    </div>
 
-            <h2>Scan a URL</h2>
+                    <button id="scanButton" class="btn-primary">
+                        <span class="btn-text">Analyze URL</span>
+                        <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
 
-            <p class="description">
-                Enter a URL below to analyze its
-                security characteristics.
-            </p>
+                <!-- QUICK TEST DEMO PRESETS -->
+                <div class="preset-links">
+                    <span class="preset-label">Quick Test Presets:</span>
+                    <button type="button" class="preset-pill" data-url="https://www.wikipedia.org/">
+                        <span class="preset-indicator safe-ind"></span> Wikipedia (Safe)
+                    </button>
+                    <button type="button" class="preset-pill" data-url="https://paypal.example/login/verify-account">
+                        <span class="preset-indicator susp-ind"></span> PayPal Phish Demo (Suspicious)
+                    </button>
+                    <button type="button" class="preset-pill" data-url="http://192.0.2.1">
+                        <span class="preset-indicator risk-ind"></span> Direct IP (Flagged)
+                    </button>
+                </div>
 
+                <!-- ERROR MESSAGE -->
+                <div id="errorMessage" class="error-banner" role="alert"></div>
 
-            <div class="input-area">
+                <!-- SCANNING LOADING ANIMATION -->
+                <div id="scanningLoader" class="scanning-loader hidden">
+                    <div class="radar-spinner">
+                        <div class="radar-sweep"></div>
+                    </div>
+                    <div class="scanning-steps">
+                        <div class="scanning-title">Conducting Deep Inspection...</div>
+                        <div class="step-items">
+                            <span class="step-item active">Parsing URL structure & heuristics</span>
+                            <span class="step-item">Querying DNS & IP intelligence</span>
+                            <span class="step-item">Validating SSL/TLS certificates</span>
+                            <span class="step-item">Auditing redirect chain safety</span>
+                            <span class="step-item">Checking threat intelligence</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                <input
-                    type="text"
-                    id="urlInput"
-                    placeholder="https://example.com"
-                >
+            <!-- SCAN RESULT DASHBOARD -->
+            <section id="resultSection" class="result hidden">
+                <div class="section-title-bar">
+                    <h2>Analysis Summary & Diagnostic Report</h2>
+                    <span class="timestamp" id="scanTimestamp">Live Scan</span>
+                </div>
 
-                <button id="scanButton">
-                    Scan URL
-                </button>
+                <!-- VERDICT HERO CARD -->
+                <div class="verdict-card" id="verdictContainer">
+                    <div class="verdict-content">
+                        <div class="verdict-header-row">
+                            <div class="verdict-pill-badge" id="verdictPill">
+                                <span id="verdictIcon">🛡️</span>
+                                <span id="resultVerdict">SAFE</span>
+                            </div>
+                            <div class="threshold-reference">
+                                <span>Thresholds:</span> 0-29 Safe • 30-59 Suspicious • 60-100 High Risk
+                            </div>
+                        </div>
 
+                        <div class="score-display-row">
+                            <div class="score-number-group">
+                                <span class="score-label">Aggregated Risk Index</span>
+                                <div class="risk-score">
+                                    <span id="resultScore" class="score-value">0</span>
+                                    <span class="score-max">/100</span>
+                                </div>
+                            </div>
+                            <div class="score-gauge-group">
+                                <div class="risk-bar">
+                                    <div id="riskBar" class="risk-bar-fill"></div>
+                                </div>
+                                <div class="risk-scale-ticks">
+                                    <span>0 (Safe)</span>
+                                    <span>30 (Suspicious)</span>
+                                    <span>60 (High Risk)</span>
+                                    <span>100</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p id="resultVerdictMessage" class="verdict-explanation"></p>
+                    </div>
+                </div>
+
+                <!-- DIAGNOSTIC CARDS GRID -->
+                <div class="dashboard-grid">
+
+                    <!-- CARD 1: THREAT INTELLIGENCE (VIRUSTOTAL) -->
+                    <div class="info-card vt-card">
+                        <div class="card-header">
+                            <div class="card-icon vt-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2l8 4.5v6.5c0 5.25-3.5 10-8 11-4.5-1-8-5.75-8-11V6.5L12 2z"/>
+                                </svg>
+                            </div>
+                            <h3>VirusTotal Threat Intelligence</h3>
+                        </div>
+
+                        <div class="vt-stat-grid">
+                            <div class="vt-stat-item">
+                                <span class="vt-label">Engine Status</span>
+                                <strong id="vtStatus" class="vt-badge">Checking</strong>
+                            </div>
+                            <div class="vt-stat-item">
+                                <span class="vt-label">Malicious</span>
+                                <strong id="vtMalicious" class="vt-count malicious">-</strong>
+                            </div>
+                            <div class="vt-stat-item">
+                                <span class="vt-label">Suspicious</span>
+                                <strong id="vtSuspicious" class="vt-count suspicious">-</strong>
+                            </div>
+                            <div class="vt-stat-item">
+                                <span class="vt-label">Harmless</span>
+                                <strong id="vtHarmless" class="vt-count harmless">-</strong>
+                            </div>
+                            <div class="vt-stat-item">
+                                <span class="vt-label">Undetected</span>
+                                <strong id="vtUndetected" class="vt-count">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="card-footer-message">
+                            <p id="vtMessage">Awaiting analysis telemetry.</p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 2: RISK FACTORS & EXPLANATIONS -->
+                    <div class="info-card factors-card">
+                        <div class="card-header">
+                            <div class="card-icon alert-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="12 2 2 22 22 22 12 2"></polygon>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                            </div>
+                            <h3>Risk Factors & Scoring Breakdown</h3>
+                        </div>
+
+                        <div id="riskFactors" class="risk-factors-list"></div>
+
+                        <div class="analysis-notes">
+                            <h4>Detailed Heuristic Findings</h4>
+                            <div id="resultReason" class="findings-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 3: URL & DOMAIN STRUCTURE -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <div class="card-icon url-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                </svg>
+                            </div>
+                            <h3>URL & Domain Structure</h3>
+                        </div>
+
+                        <div class="info-grid">
+                            <div class="info-item full-width">
+                                <span>Target URL</span>
+                                <strong id="resultUrl" class="mono-text"></strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Domain / Host</span>
+                                <strong id="resultDomain" class="mono-text"></strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Registered Domain</span>
+                                <strong id="registeredDomain" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Subdomain</span>
+                                <strong id="domainSubdomain" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Top-Level Domain (TLD)</span>
+                                <strong id="domainTLD" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Protocol Scheme</span>
+                                <strong id="resultProtocol" class="mono-text"></strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Path</span>
+                                <strong id="resultPath" class="mono-text"></strong>
+                            </div>
+                            <div class="info-item">
+                                <span>URL Length</span>
+                                <strong id="resultLength"></strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 4: DOMAIN REGISTRATION (RDAP) -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <div class="card-icon rdap-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </div>
+                            <h3>Domain Registration Intelligence</h3>
+                        </div>
+
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span>Domain Age</span>
+                                <strong id="domainAge">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Registrar</span>
+                                <strong id="registrar">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Creation Date</span>
+                                <strong id="creationDate" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Expiration Date</span>
+                                <strong id="expirationDate" class="mono-text">-</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD 5: DNS RESOLUTION & INTEGRITY -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <div class="card-icon dns-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                                    <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                                    <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                                </svg>
+                            </div>
+                            <h3>DNS Analysis & Integrity Checks</h3>
+                        </div>
+
+                        <div class="dns-status-banner">
+                            <span>Resolution Status:</span>
+                            <strong id="dnsStatus" class="status-indicator">Checking...</strong>
+                        </div>
+
+                        <div class="dns-records-container">
+                            <div class="dns-record-block">
+                                <div class="dns-type-header">A Records (IPv4)</div>
+                                <div id="dnsA" class="dns-record-content mono-text">No records found</div>
+                            </div>
+                            <div class="dns-record-block">
+                                <div class="dns-type-header">AAAA Records (IPv6)</div>
+                                <div id="dnsAAAA" class="dns-record-content mono-text">No records found</div>
+                            </div>
+                            <div class="dns-record-block">
+                                <div class="dns-type-header">MX Records (Mail)</div>
+                                <div id="dnsMX" class="dns-record-content mono-text">No records found</div>
+                            </div>
+                            <div class="dns-record-block">
+                                <div class="dns-type-header">NS Records (Nameservers)</div>
+                                <div id="dnsNS" class="dns-record-content mono-text">No records found</div>
+                            </div>
+                            <div class="dns-record-block">
+                                <div class="dns-type-header">CNAME Records</div>
+                                <div id="dnsCNAME" class="dns-record-content mono-text">No records found</div>
+                            </div>
+                        </div>
+
+                        <div class="dns-security-summary">
+                            <div class="summary-item">
+                                <span>Domain Resolves:</span> <strong id="dnsSecurityResolves">--</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>IPv4 Found:</span> <strong id="dnsSecurityIPv4">--</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>IPv6 Found:</span> <strong id="dnsSecurityIPv6">--</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Nameservers:</span> <strong id="dnsSecurityNameservers">--</strong>
+                            </div>
+                            <div class="summary-item">
+                                <span>Mail Servers:</span> <strong id="dnsSecurityMail">--</strong>
+                            </div>
+                        </div>
+
+                        <div class="security-findings-box">
+                            <span class="findings-title">DNS Security Audit:</span>
+                            <ul id="dnsSecurityFindings" class="findings-bullets">
+                                <li>Awaiting analysis</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- CARD 6: IP INTELLIGENCE & GEOLOCATION -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <div class="card-icon geo-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                            </div>
+                            <h3>IP Intelligence & Geolocation</h3>
+                        </div>
+
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span>IP Domain</span>
+                                <strong id="ipDomain" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Resolution State</span>
+                                <strong id="ipResolutionStatus">-</strong>
+                            </div>
+                            <div class="info-item full-width">
+                                <span>IPv4 Addresses</span>
+                                <ul id="ipv4Addresses" class="ip-list mono-text"></ul>
+                            </div>
+                            <div class="info-item full-width">
+                                <span>IPv6 Addresses</span>
+                                <ul id="ipv6Addresses" class="ip-list mono-text"></ul>
+                            </div>
+                            <div class="info-item">
+                                <span>Country</span>
+                                <strong id="geoCountry">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Country Code</span>
+                                <strong id="geoCountryCode" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>City / Region</span>
+                                <strong><span id="geoCity">-</span>, <span id="geoRegion">-</span></strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Autonomous System (ASN)</span>
+                                <strong id="geoASN" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item full-width">
+                                <span>Organization / ISP</span>
+                                <strong id="geoOrganization">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="card-footer-message">
+                            <p id="ipMessage">-</p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 7: SSL / TLS CERTIFICATE AUDIT -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <div class="card-icon ssl-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                            </div>
+                            <h3>SSL / TLS Certificate Validation</h3>
+                        </div>
+
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span>Certificate Status</span>
+                                <strong id="sslStatus" class="status-indicator">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Domain Name Match</span>
+                                <strong id="sslDomainMatch">-</strong>
+                            </div>
+                            <div class="info-item full-width">
+                                <span>Certificate Issuer</span>
+                                <strong id="sslIssuer">-</strong>
+                            </div>
+                            <div class="info-item full-width">
+                                <span>Certificate Subject</span>
+                                <strong id="sslSubject">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Valid From</span>
+                                <strong id="sslValidFrom" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Valid Until</span>
+                                <strong id="sslValidUntil" class="mono-text">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Days Remaining</span>
+                                <strong id="sslDaysRemaining">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="card-footer-message">
+                            <p id="sslMessage">-</p>
+                        </div>
+                    </div>
+
+                    <!-- CARD 8: REDIRECT & PROTOCOL SECURITY -->
+                    <div class="info-card">
+                        <div class="card-header">
+                            <div class="card-icon redirect-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 14 20 9 15 4"></polyline>
+                                    <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+                                </svg>
+                            </div>
+                            <h3>Redirect Security & Protocol Downgrade Inspection</h3>
+                        </div>
+
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span>Redirect Hops</span>
+                                <strong id="redirectCount">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Analysis Status</span>
+                                <strong id="redirectStatus">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>HTTPS Downgrade</span>
+                                <strong id="redirectDowngrade">-</strong>
+                            </div>
+                            <div class="info-item">
+                                <span>Redirect Limit Hit</span>
+                                <strong id="redirectExcessive">-</strong>
+                            </div>
+                            <div class="info-item full-width">
+                                <span>Final Destination</span>
+                                <strong id="redirectFinalUrl" class="mono-text">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="redirect-findings-box">
+                            <span class="findings-title">Redirect Findings:</span>
+                            <ul id="redirectFindings" class="findings-bullets"></ul>
+                        </div>
+
+                        <div class="redirect-chain-box">
+                            <span class="findings-title">Observed Redirect Chain:</span>
+                            <ol id="redirectChain" class="chain-list mono-text"></ol>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER & METHODOLOGY NOTE -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>
+                    <strong>PhishGuard Evaluation Note:</strong> A <span class="verdict-safe-text">SAFE</span> verdict denotes that no malicious indicators were flagged by the active rule heuristics or threat intelligence engines. It does not provide an absolute safety guarantee.
+                </p>
+                <p class="copyright">
+                    Developed for College Cybersecurity Demonstration • Python / Flask / Heuristic Risk Engine
+                </p>
             </div>
-
-
-            <p id="errorMessage"></p>
-
-        </section>
-
-
-        <!-- RESULT -->
-        <section
-    id="resultSection"
-    class="result hidden"
->
-
-    <h2>Scan Result</h2>
-
-    <!-- VERDICT -->
-    <div class="verdict-card">
-
-        <div class="verdict-title">
-            <span id="verdictIcon">⚠️</span>
-
-            <span id="resultVerdict">
-                SUSPICIOUS
-            </span>
-        </div>
-
-        <div class="risk-score">
-
-            <span id="resultScore">
-                0/100
-            </span>
-
-        </div>
-
-        <div class="risk-bar">
-
-            <div
-                id="riskBar"
-                class="risk-bar-fill"
-            ></div>
-
-        </div>
-
-        <p id="resultVerdictMessage"></p>
-
+        </footer>
     </div>
 
-
-    <!-- URL INFORMATION -->
-    <div class="info-card">
-
-        <h3>🔗 URL Information</h3>
-
-        <div class="info-grid">
-
-            <div class="info-item">
-
-                <span>URL</span>
-
-                <strong id="resultUrl"></strong>
-
-            </div>
-
-
-            <div class="info-item">
-
-                <span>Domain</span>
-
-                <strong id="resultDomain"></strong>
-
-            </div>
-
-
-            <div class="info-item">
-
-                <span>Protocol</span>
-
-                <strong id="resultProtocol"></strong>
-
-            </div>
-
-
-            <div class="info-item">
-
-                <span>Path</span>
-
-                <strong id="resultPath"></strong>
-
-            </div>
-
-
-            <div class="info-item">
-
-                <span>URL Length</span>
-
-                <strong id="resultLength"></strong>
-
-            </div>
-
-        </div>
-
-    </div>
-    <!-- DOMAIN INFORMATION -->
-    <div class="info-card">
-
-    <h3>🌍 Domain Information</h3>
-
-    <div class="info-grid">
-
-        <div class="info-item">
-
-            <span>Registered Domain</span>
-
-            <strong id="registeredDomain">
-                -
-            </strong>
-
-        </div>
-
-
-        <div class="info-item">
-
-            <span>Subdomain</span>
-
-            <strong id="domainSubdomain">
-                -
-            </strong>
-
-        </div>
-
-
-        <div class="info-item">
-
-            <span>Top-Level Domain</span>
-
-            <strong id="domainTLD">
-                -
-            </strong>
-
-        </div>
-
-        <div class="info-item">
-            <span>Domain Age</span>
-            <strong id="domainAge">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Registration Date</span>
-            <strong id="creationDate">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Expiration Date</span>
-            <strong id="expirationDate">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Registrar</span>
-            <strong id="registrar">-</strong>
-        </div>
-
-
-    </div>
-
-    </div>
-
-
-    <!-- RISK FACTORS -->
-    <div class="info-card">
-
-        <h3>🔍 Risk Factors</h3>
-
-        <div id="riskFactors"></div>
-
-    </div>
-
-
-    <!-- ANALYSIS -->
-    <div class="info-card">
-
-        <h3>📝 Analysis</h3>
-
-        <div id="resultReason"></div>
-
-    </div>
-    <!-- DNS ANALYSIS -->
-<div class="info-card">
-
-    <h3>🌐 DNS Analysis</h3>
-
-    <div class="dns-status">
-
-        <span>DNS Status</span>
-
-        <strong id="dnsStatus">
-            Checking...
-        </strong>
-
-    </div>
-
-
-    <div class="dns-record">
-
-        <h4>A Records</h4>
-
-        <div id="dnsA">
-            No records found
-        </div>
-
-    </div>
-
-
-    <div class="dns-record">
-
-        <h4>AAAA Records</h4>
-
-        <div id="dnsAAAA">
-            No records found
-        </div>
-
-    </div>
-
-
-    <div class="dns-record">
-
-        <h4>MX Records</h4>
-
-        <div id="dnsMX">
-            No records found
-        </div>
-
-    </div>
-
-
-    <div class="dns-record">
-
-        <h4>Name Servers (NS)</h4>
-
-        <div id="dnsNS">
-            No records found
-        </div>
-
-    </div>
-
-
-    <div class="dns-record">
-
-        <h4>CNAME</h4>
-
-        <div id="dnsCNAME">
-            No records found
-        </div>
-
-    </div>
-
-</div>
-
-<!-- DNS Security Checks -->
-<div class="analysis-card dns-security-card">
-    <h3>DNS Security Checks</h3>
-
-    <div class="analysis-item">
-        <span>Domain Resolves</span>
-        <strong id="dnsSecurityResolves">--</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>IPv4 Record</span>
-        <strong id="dnsSecurityIPv4">--</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>IPv6 Record</span>
-        <strong id="dnsSecurityIPv6">--</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Nameservers</span>
-        <strong id="dnsSecurityNameservers">--</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Mail Servers</span>
-        <strong id="dnsSecurityMail">--</strong>
-    </div>
-
-    <div class="analysis-item dns-findings-row">
-        <span>Findings</span>
-        <ul id="dnsSecurityFindings">
-            <li>Awaiting analysis</li>
-        </ul>
-    </div>
-</div>
-<!-- IP & Network Intelligence -->
-<div class="info-card">
-    <h3>IP & Network Intelligence</h3>
-
-    <div class="analysis-item">
-        <span>Domain</span>
-        <strong id="ipDomain">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Resolution Status</span>
-        <strong id="ipResolutionStatus">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>IPv4 Addresses</span>
-        <ul id="ipv4Addresses"></ul>
-    </div>
-
-    <div class="analysis-item">
-        <span>IPv6 Addresses</span>
-        <ul id="ipv6Addresses"></ul>
-    </div>
-
-    <div class="analysis-item">
-        <span>Message</span>
-        <strong id="ipMessage">-</strong>
-    </div>
-
-    <!-- IP Geolocation and Network Information -->
-    <div class="analysis-item">
-        <span>City</span>
-        <strong id="geoCity">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Region</span>
-        <strong id="geoRegion">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Country</span>
-        <strong id="geoCountry">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Country Code</span>
-        <strong id="geoCountryCode">-</strong>
-        </div>
-
-    <div class="analysis-item">
-        <span>Organization</span>
-        <strong id="geoOrganization">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>ASN</span>
-        <strong id="geoASN">-</strong>
-    </div>
-
-    </div>
-    <!-- VirusTotal Threat Intelligence -->
-<div class="info-card">
-    <h3>🛡️ VirusTotal Threat Intelligence</h3>
-
-    <div class="analysis-item">
-        <span>Analysis Status</span>
-        <strong id="vtStatus">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Harmless Detections</span>
-        <strong id="vtHarmless">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Malicious Detections</span>
-        <strong id="vtMalicious">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Suspicious Detections</span>
-        <strong id="vtSuspicious">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Undetected</span>
-        <strong id="vtUndetected">-</strong>
-    </div>
-
-    <p id="vtMessage">Awaiting analysis.</p>
-</div>
-
-   
-<!-- Redirect Analysis -->
-<div class="info-card">
-    <h3>Redirect Analysis</h3>
-
-    <div class="analysis-item">
-        <span>Redirect Count</span>
-        <strong id="redirectCount">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Final Destination</span>
-        <strong id="redirectFinalUrl">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>HTTPS Downgrade</span>
-        <strong id="redirectDowngrade">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Redirect Limit Reached</span>
-        <strong id="redirectExcessive">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Analysis Status</span>
-        <strong id="redirectStatus">-</strong>
-    </div>
-
-    <div class="analysis-item">
-        <span>Findings</span>
-        <ul id="redirectFindings"></ul>
-    </div>
-
-    <div class="analysis-item">
-        <span>Redirect Chain</span>
-        <ol id="redirectChain"></ol>
-    </div>
-    
-</div>
-<!-- SSL/TLS ANALYSIS -->
-<div class="info-card">
-
-    <h3>🔐 SSL/TLS Analysis</h3>
-
-    <div class="info-grid">
-
-        <div class="info-item">
-            <span>Certificate Status</span>
-            <strong id="sslStatus">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Domain Match</span>
-            <strong id="sslDomainMatch">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Certificate Issuer</span>
-            <strong id="sslIssuer">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Certificate Subject</span>
-            <strong id="sslSubject">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Valid From</span>
-            <strong id="sslValidFrom">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Expiration Date</span>
-            <strong id="sslValidUntil">-</strong>
-        </div>
-
-        <div class="info-item">
-            <span>Days Until Expiry</span>
-            <strong id="sslDaysRemaining">-</strong>
-        </div>
-
-    </div>
-
-    <p id="sslMessage" style="margin-top: 16px;"></p>
-
-</div>
-
-
-</section>
-
-    </div>
-
-
-    <script
-        src="{{ url_for('static', filename='script.js') }}"
-    ></script>
-
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 
 </html>

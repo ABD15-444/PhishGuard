@@ -265,43 +265,9 @@ def check_https(protocol):
         False,
         "URL does not use HTTPS"
     )
-
 # ========================================
 # DNS CHECK
 # ========================================
-def check_dns(domain):
-    records = {}
-
-    record_types = ["A", "AAAA", "MX", "NS", "CNAME"]
-
-    for record_type in record_types:
-
-        try:
-            answers = dns.resolver.resolve(domain, record_type)
-
-            records[record_type] = [
-                str(answer) for answer in answers
-            ]
-
-        except (
-            dns.resolver.NoAnswer,
-            dns.resolver.NXDOMAIN,
-            dns.resolver.NoNameservers,
-            dns.exception.Timeout
-        ):
-            records[record_type] = []
-
-        except Exception:
-            records[record_type] = []
-
-    dns_resolves = any(
-        len(records[record_type]) > 0
-        for record_type in record_types
-    )
-
-    return dns_resolves, records
-
-
 def check_dns(domain):
     resolver = dns.resolver.Resolver(configure=False)
     resolver.nameservers = ["1.1.1.1"]
@@ -521,23 +487,31 @@ def check_ssl_certificate(domain):
         "message": "Certificate information unavailable"
     }
 
-    try:
-        # Remove a trailing dot, if present
-        domain = domain.rstrip(".")
+    if not domain:
+        result["message"] = "No domain provided for SSL certificate check."
+        return result
 
+    clean_domain = domain.rstrip(".").strip("[]")
+
+    # SSRF Protection: verify destination is a safe public host before connecting
+    if not is_safe_public_host(clean_domain):
+        result["message"] = (
+            "SSL certificate inspection blocked: host is not a verified public host."
+        )
+        return result
+
+    try:
         # Connect using normal certificate verification
         context = ssl.create_default_context(cafile=certifi.where())
-        print("SSL certificate bundle:", certifi.where())
-        print("Checking hostname:", domain)
 
         with socket.create_connection(
-            (domain, 443),
+            (clean_domain, 443),
             timeout=5
         ) as connection:
 
             with context.wrap_socket(
                 connection,
-                server_hostname=domain
+                server_hostname=clean_domain
             ) as secure_socket:
 
                 certificate = secure_socket.getpeercert()
@@ -642,6 +616,25 @@ def get_ip_intelligence(domain):
         "message": ""
     }
 
+    if not domain:
+        result["message"] = "No domain provided."
+        return result
+
+    clean_domain = domain.rstrip(".").strip("[]")
+
+    # If domain is already a direct IP address
+    try:
+        parsed_ip = ipaddress.ip_address(clean_domain)
+        if parsed_ip.version == 4:
+            result["ipv4_addresses"].append(clean_domain)
+        else:
+            result["ipv6_addresses"].append(clean_domain)
+        result["resolved"] = True
+        result["message"] = "Direct IP address supplied."
+        return result
+    except ValueError:
+        pass
+
     record_types = [
         ("A", "ipv4_addresses"),
         ("AAAA", "ipv6_addresses")
@@ -652,7 +645,7 @@ def get_ip_intelligence(domain):
     for record_type, result_key in record_types:
         try:
             answers = dns.resolver.resolve(
-                domain,
+                clean_domain,
                 record_type,
                 lifetime=5
             )
@@ -805,8 +798,12 @@ def get_risk_verdict(score):
 def is_safe_public_host(hostname):
     """Reject hosts that resolve to non-public IP addresses."""
     try:
+        if not hostname:
+            return False
+
+        clean_host = hostname.strip("[]")
         ip_addresses = socket.getaddrinfo(
-            hostname, None, type=socket.SOCK_STREAM
+            clean_host, None, type=socket.SOCK_STREAM
         )
 
         if not ip_addresses:
@@ -822,6 +819,7 @@ def is_safe_public_host(hostname):
                 or ip.is_link_local
                 or ip.is_multicast
                 or ip.is_reserved
+                or ip.is_unspecified
             ):
                 return False
 
@@ -1102,44 +1100,32 @@ def scan_url():
     # --------------------------------
     # GET REQUEST DATA
     # --------------------------------
+    data = request.get_json(silent=True)
 
-    data = request.get_json()
-
-    if not data or "url" not in data:
-
+    if not data or not isinstance(data, dict) or "url" not in data:
         return jsonify({
             "error": "URL is required"
         }), 400
 
-
     # --------------------------------
-    # GET URL
+    # GET & VALIDATE URL
     # --------------------------------
-
-    url = data["url"].strip()
-
-
-    # --------------------------------
-    # CHECK EMPTY URL
-    # --------------------------------
-
-    if not url:
-
+    raw_url = data["url"]
+    if not isinstance(raw_url, str):
         return jsonify({
             "error": "Please enter a URL"
         }), 400
 
+    url = raw_url.strip()
+
+    if not url:
+        return jsonify({
+            "error": "Please enter a URL"
+        }), 400
 
     # --------------------------------
     # ADD HTTPS IF PROTOCOL MISSING
     # --------------------------------
-
-   # Normalize and validate the URL
-    url = url.strip()
-
-    if not url:
-        return jsonify({"error": "URL is required."}), 400
-
     parsed_input = urlparse(url)
 
     if parsed_input.scheme:
@@ -1149,10 +1135,9 @@ def scan_url():
             }), 400
     else:
         url = "https://" + url
+        parsed_input = urlparse(url)
 
-    parsed_input = urlparse(url)
-
-# Validate hostname and port
+    # Validate hostname and port
     try:
         hostname = parsed_input.hostname
         parsed_input.port  # Raises ValueError for an invalid port
@@ -1162,13 +1147,13 @@ def scan_url():
     if not hostname:
         return jsonify({"error": "URL must contain a hostname."}), 400
 
-# Reject whitespace in the hostname
+    # Reject whitespace in the hostname
     if any(character.isspace() for character in hostname):
         return jsonify({"error": "Invalid hostname."}), 400
 
-# Accept valid IP addresses or validate a domain name
+    # Accept valid IP addresses or validate a domain name
     try:
-        ipaddress.ip_address(hostname)
+        ipaddress.ip_address(hostname.strip("[]"))
     except ValueError:
         try:
             ascii_hostname = hostname.rstrip(".").encode("idna").decode("ascii")
@@ -1184,7 +1169,7 @@ def scan_url():
             not label
             or len(label) > 63
             or not re.fullmatch(
-                r"[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?",
+                r"[a-zA-Z0-9_](?:[a-zA-Z0-9_-]*[a-zA-Z0-9_])?",
                 label
             )
             for label in labels
@@ -1594,9 +1579,10 @@ def scan_url():
 # START SERVER
 # ========================================
 if __name__ == "__main__":
-
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() in ("true", "1", "yes")
+    port = int(os.getenv("PORT", "5000"))
     app.run(
-        debug=True,
+        debug=debug_mode,
         host="127.0.0.1",
-        port=5000
+        port=port
     )
