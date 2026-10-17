@@ -1,0 +1,9 @@
+source,vt_status,evidence_classification,count
+fresh_tranco_candidate,no_existing_report,insufficient_evidence,1
+fresh_tranco_candidate,report_retrieved,needs_review,3
+fresh_tranco_candidate,report_retrieved,phishing_supported,7
+fresh_tranco_candidate,report_retrieved,uncertain,47
+fresh_tranco_candidate,request_error,insufficient_evidence,2
+phishtank_validation,no_existing_report,insufficient_evidence,2
+phishtank_validation,report_retrieved,phishing_supported,56
+phishtank_validation,request_error,insufficient_evidence,2

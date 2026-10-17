@@ -1,0 +1,9 @@
+url,phishing_probability,predicted_label
+https://paypal-banking.pro,0.105214,legitimate
+https://paypal-banking.pro/,0.057083,legitimate
+https://www.paypal-banking.pro,1.0,phishing
+https://www.paypal-banking.pro/,1.0,phishing
+http://paypal-banking.pro/,0.635,phishing
+https://paypal-banking.pro/login,0.985,phishing
+https://fide-litiy.cyou/,0.204374,legitimate
+https://fide-lltny.cyou/,0.461877,legitimate

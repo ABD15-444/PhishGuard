@@ -1,0 +1,17 @@
+url,source,ml_phishing_probability,vt_malicious,url_length,hostname_length,path_length,dot_count,subdomain_count,keyword_count,digit_count,entropy
+https://transparenzregister.cc/,phishtank_validation,0.0116666666666666,17.0,31,22,1,1,0,0,0,3.7232314287976203
+https://cdaifa.com,phishtank_validation,0.42,16.0,18,10,1,1,0,0,0,3.7254805569978675
+https://olxhit.com/,fresh_tranco_candidate,0.0,10.0,19,10,1,1,0,0,0,3.5724312513221195
+https://indonesiaku.space/,fresh_tranco_candidate,0.0,1.0,26,17,1,1,0,0,0,3.8936606896881845
+https://vip555ku.com/,fresh_tranco_candidate,0.02,1.0,21,12,1,1,0,0,3,3.7841837197791888
+https://hhkungfu.ee/,fresh_tranco_candidate,0.0,1.0,20,11,1,1,0,0,0,3.5766176449086657
+https://cognitoforms.com/,fresh_tranco_candidate,0.0,1.0,25,16,1,1,0,0,0,3.7201755214643453
+https://mawartotovans.com/,fresh_tranco_candidate,0.2344552669552669,1.0,26,17,1,1,0,0,0,3.703465189601646
+https://mastiraja.com/,fresh_tranco_candidate,0.0633044947711011,1.0,22,13,1,1,0,0,0,3.6537567082870006
+https://ohchr.org/,tranco_candidate,,,18,9,1,1,0,0,0,3.337175341123077
+https://championat.com/,tranco_candidate,,,23,14,1,1,0,0,0,3.606936732175322
+https://gdebenz.ru/,tranco_candidate,,,19,10,1,1,0,0,0,3.8365916681089787
+https://samsungcloud.tv/,tranco_candidate,,,24,15,1,1,0,0,0,3.9361804341297555
+https://admin.ch/,tranco_candidate,,,17,8,1,1,0,0,0,3.625
+https://google.co.kr/,tranco_candidate,,,21,12,1,2,0,0,0,3.6841837197791887
+https://fischipedia.org/,tranco_candidate,,,24,15,1,1,0,0,0,3.882045108136863

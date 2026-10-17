@@ -1,0 +1,5 @@
+source,validation_status,count
+fresh_tranco_candidate,excluded_uncertain,53
+fresh_tranco_candidate,phishing_supported,7
+phishtank_validation,excluded_uncertain,4
+phishtank_validation,phishing_supported,56

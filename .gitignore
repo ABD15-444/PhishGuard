@@ -35,5 +35,9 @@ ml_test.csv
 # Binary machine learning model artifacts
 *.joblib
 
+# Temporary experiment snapshots & backups
+*_before_*
+*_backup.csv
+
 # Logs and runtime traces
 *.log

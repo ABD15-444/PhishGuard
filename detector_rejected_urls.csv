@@ -1,0 +1,5 @@
+url,actual_label,error
+https://coinbase_x_login.godaddysites.com/,1,"Rule-based scan failed for https://coinbase_x_login.godaddysites.com/: 400 {""error"":""Invalid hostname.""}
+"
+https://uphold_logp_us.godaddysites.com/,1,"Rule-based scan failed for https://uphold_logp_us.godaddysites.com/: 400 {""error"":""Invalid hostname.""}
+"

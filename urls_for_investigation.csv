@@ -1,0 +1,17 @@
+url,source,ml_prediction,ml_phishing_probability,evidence_classification,malicious,suspicious,harmless,undetected,comparison,investigation_reason
+https://indonesiaku.space/,fresh_tranco_candidate,0,0.0,phishing_supported,1.0,0.0,58.0,32.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://vip555ku.com/,fresh_tranco_candidate,0,0.02,phishing_supported,1.0,2.0,56.0,34.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://hhkungfu.ee/,fresh_tranco_candidate,0,0.0,phishing_supported,1.0,0.0,58.0,34.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://cognitoforms.com/,fresh_tranco_candidate,0,0.0,phishing_supported,1.0,0.0,59.0,33.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://olxhit.com/,fresh_tranco_candidate,0,0.0,phishing_supported,10.0,3.0,49.0,30.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://mawartotovans.com/,fresh_tranco_candidate,0,0.2344552669552669,phishing_supported,1.0,0.0,57.0,34.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://transparenzregister.cc/,phishtank_validation,0,0.0116666666666666,phishing_supported,17.0,1.0,45.0,31.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://mastiraja.com/,fresh_tranco_candidate,0,0.0633044947711011,phishing_supported,1.0,1.0,59.0,32.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://cdaifa.com,phishtank_validation,0,0.42,phishing_supported,16.0,0.0,47.0,30.0,disagreement_review,"VirusTotal supports phishing, but ML predicts legitimate"
+https://ohchr.org/,tranco_candidate,0,,flagged_popular_domain,,,,,rule_based_false_positive,Popular-domain candidate predicted as phishing by rule-based detector
+https://championat.com/,tranco_candidate,0,,flagged_popular_domain,,,,,rule_based_false_positive,Popular-domain candidate predicted as phishing by rule-based detector
+https://gdebenz.ru/,tranco_candidate,0,,flagged_popular_domain,,,,,rule_based_false_positive,Popular-domain candidate predicted as phishing by rule-based detector
+https://samsungcloud.tv/,tranco_candidate,0,,flagged_popular_domain,,,,,rule_based_false_positive,Popular-domain candidate predicted as phishing by rule-based detector
+https://admin.ch/,tranco_candidate,0,,flagged_popular_domain,,,,,rule_based_false_positive,Popular-domain candidate predicted as phishing by rule-based detector
+https://google.co.kr/,tranco_candidate,0,,flagged_popular_domain,,,,,rule_based_false_positive,Popular-domain candidate predicted as phishing by rule-based detector
+https://fischipedia.org/,tranco_candidate,0,,flagged_popular_domain,,,,,rule_based_false_positive,Popular-domain candidate predicted as phishing by rule-based detector
